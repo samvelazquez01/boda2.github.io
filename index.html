@@ -7,7 +7,8 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Landing / Cover -->
+
+  <!-- Landing -->
   <div id="landing-section" class="landing-section">
     <div class="landing-overlay"></div>
     <div class="landing-content">
@@ -17,7 +18,7 @@
     </div>
   </div>
 
-  <!-- Main content -->
+  <!-- Main -->
   <div id="main-content" class="main-content hidden">
     <header class="header">
       <div class="header-content">
@@ -34,23 +35,25 @@
       </section>
 
       <section id="gallery-section" class="section hidden">
-        <button id="back-btn" class="back-btn">← Volver a Momentos</button>
+        <button id="back-btn" class="back-btn">← Volver</button>
         <h2 id="gallery-title" class="section-title"></h2>
         <div id="gallery-grid" class="gallery-grid"></div>
       </section>
     </main>
 
+    <!-- Lightbox -->
     <div id="lightbox" class="lightbox hidden">
       <button class="lightbox-close">×</button>
       <button class="lightbox-prev">‹</button>
       <button class="lightbox-next">›</button>
       <button class="lightbox-download" title="Descargar foto">⬇</button>
-      <img class="lightbox-img" src="/placeholder.svg" alt="">
+      <img class="lightbox-img" src="">
       <div class="lightbox-counter"></div>
     </div>
+
   </div>
 
-  <!-- Firebase + App logic -->
+  <!-- FIREBASE + APP -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
     import {
@@ -60,10 +63,10 @@
       collection,
       query,
       orderBy,
-      onSnapshot as onSnapshotCol,
+      onSnapshot as listenCol
     } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-    // --- FIREBASE CONFIG (igual a tu admin.html) ---
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyAzyFSpQSlo5ZrV-OioFxvgyPMsRLvELKQ",
       authDomain: "boda-725be.firebaseapp.com",
@@ -76,123 +79,141 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    window.db = db; // compatible con admin.js
+    window.db = db;
 
-    // UI refs
-    const landing = document.getElementById('landing-section');
-    const viewBtn = document.getElementById('view-album-btn');
-    const mainContent = document.getElementById('main-content');
-    const albumsGrid = document.getElementById('albums-grid');
-    const gallerySection = document.getElementById('gallery-section');
-    const galleryGrid = document.getElementById('gallery-grid');
-    const galleryTitle = document.getElementById('gallery-title');
-    const backBtn = document.getElementById('back-btn');
+    const landing = document.getElementById("landing-section");
+    const viewBtn = document.getElementById("view-album-btn");
+    const mainContent = document.getElementById("main-content");
+    const albumsGrid = document.getElementById("albums-grid");
+    const gallerySection = document.getElementById("gallery-section");
+    const galleryGrid = document.getElementById("gallery-grid");
+    const galleryTitle = document.getElementById("gallery-title");
+    const backBtn = document.getElementById("back-btn");
 
-    // Helper: set landing background image safely with cache-busting
-    function setLandingCover(url) {
-      if (!url) {
-        landing.style.backgroundImage = 'url("/placeholder.svg?height=1080&width=1920")';
-        return;
+    // -------- Descargar universal (iPhone + Android + PC) ----------
+    async function forceDownload(url, filename) {
+      try {
+        const res = await fetch(url, { mode: "cors" });
+        const blob = await res.blob();
+
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = filename || "foto.jpg";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(blobUrl);
+      } catch (err) {
+        console.error("ForceDownload error:", err);
+        alert("No se pudo descargar la imagen");
       }
-      // add timestamp to prevent cached versions
-      const busted = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
-      landing.style.backgroundImage = `url("${busted}")`;
     }
 
-    // SHOW main content
-    viewBtn.addEventListener('click', () => {
-      mainContent.classList.remove('hidden');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+    // Lightbox function
+    const lightbox = document.getElementById("lightbox");
+    const lbImg = lightbox.querySelector(".lightbox-img");
 
-    backBtn.addEventListener('click', () => {
-      gallerySection.classList.add('hidden');
-      document.querySelector('.section').scrollIntoView({ behavior: 'smooth' });
-    });
+    function openLightbox(url, filename) {
+      lbImg.dataset.originalUrl = url;
+      lbImg.dataset.filename = filename;
+      lbImg.src = url + "?v=" + Date.now();
+      lightbox.classList.remove("hidden");
+    }
 
-    // --- Real-time listener for settings.coverUrl ---
-    const settingsDoc = doc(db, 'meta', 'settings');
-    onSnapshot(settingsDoc, snap => {
+    lightbox.querySelector(".lightbox-download").onclick = () => {
+      const cleanUrl = lbImg.dataset.originalUrl;
+      const filename = lbImg.dataset.filename || "foto.jpg";
+      forceDownload(cleanUrl, filename);
+    };
+
+    lightbox.querySelector(".lightbox-close").onclick = () =>
+      lightbox.classList.add("hidden");
+
+    // ----- UI -----
+    viewBtn.onclick = () => {
+      mainContent.classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    backBtn.onclick = () => gallerySection.classList.add("hidden");
+
+    // -------- COVER (portada dinámica) ----------
+    const settingsDoc = doc(db, "meta", "settings");
+    onSnapshot(settingsDoc, (snap) => {
       const data = snap.exists() ? snap.data() : {};
-      setLandingCover(data.coverUrl || '');
+      const url = data.coverUrl || "";
+      landing.style.backgroundImage = url
+        ? `url("${url}?v=${Date.now()}")`
+        : "url('placeholder.svg')";
     });
 
-    // --- Basic album & photo realtime rendering (keeps public site in sync) ---
-    // If your existing app.js already does album/photo rendering, this will be harmless.
-    const albumsCol = collection(db, 'albums');
-    const photosCol = collection(db, 'photos');
-
-    // listen albums (show thumbnails if present)
-    onSnapshotCol(query(albumsCol, orderBy('createdAt', 'desc')), snap => {
-      albumsGrid.innerHTML = '';
-      snap.forEach(d => {
+    // -------- ALBUMS ----------
+    const albumsCol = collection(db, "albums");
+    listenCol(query(albumsCol, orderBy("createdAt", "desc")), (snap) => {
+      albumsGrid.innerHTML = "";
+      snap.forEach((d) => {
         const a = d.data();
-        const card = document.createElement('div');
-        card.className = 'album-card';
-        const cover = (a.coverUrl || '/placeholder.svg') + '?v=' + Date.now();
+        const card = document.createElement("div");
+        card.className = "album-card";
+        const cover = (a.coverUrl || "/placeholder.svg") + "?v=" + Date.now();
+
         card.innerHTML = `
-          <img class="album-card-bg" src="${cover}" alt="${a.name}" />
+          <img class="album-card-bg" src="${cover}">
           <div class="album-card-overlay">
             <div class="album-card-title">${a.name}</div>
             <div class="album-card-count">${a.count || 0} fotos</div>
           </div>
         `;
+
         card.onclick = () => openAlbum(d.id, a.name);
         albumsGrid.appendChild(card);
       });
-      if (snap.size === 0) albumsGrid.innerHTML = '<div class="loading">No hay momentos todavía.</div>';
+
+      if (snap.size === 0) {
+        albumsGrid.innerHTML = "<div class='loading'>No hay momentos aún.</div>";
+      }
     });
 
-    // open album -> render photos
+    // -------- FOTOS ----------
+    const photosCol = collection(db, "photos");
+
     function openAlbum(albumId, name) {
       galleryTitle.textContent = name;
-      galleryGrid.innerHTML = '<div class="loading">Cargando fotos...</div>';
-      gallerySection.classList.remove('hidden');
+      galleryGrid.innerHTML = "<div class='loading'>Cargando fotos...</div>";
+      gallerySection.classList.remove("hidden");
 
-      const q = query(photosCol, orderBy('createdAt', 'desc'));
-      // simple filter client-side for albumId
-      const unsub = onSnapshotCol(q, snap => {
-        galleryGrid.innerHTML = '';
-        const photos = [];
-        snap.forEach(d => { const p = d.data(); p.id = d.id; if (p.albumId === albumId) photos.push(p); });
-        if (photos.length === 0) galleryGrid.innerHTML = '<div class="loading">No hay fotos en este momento.</div>';
-        photos.forEach(p => {
-          const it = document.createElement('div'); it.className = 'gallery-item';
-          const img = document.createElement('img'); img.className = 'gallery-item-img';
-          img.src = p.url + '?v=' + Date.now();
-          img.alt = p.filename || '';
-          it.appendChild(img);
-          it.onclick = () => openLightbox(p.url);
-          galleryGrid.appendChild(it);
-        });
-      });
+      listenCol(
+        query(photosCol, orderBy("createdAt", "desc")),
+        (snap) => {
+          const photos = [];
+          snap.forEach((d) => {
+            const p = d.data();
+            if (p.albumId === albumId) photos.push({ id: d.id, ...p });
+          });
 
-      // when user goes back, unsubscribe to avoid memory leaks
-      backBtn.onclick = () => { unsub(); gallerySection.classList.add('hidden'); };
+          galleryGrid.innerHTML = "";
+
+          photos.forEach((p) => {
+            const item = document.createElement("div");
+            item.className = "gallery-item";
+
+            const img = document.createElement("img");
+            img.className = "gallery-item-img";
+            img.src = p.url + "?v=" + Date.now();
+
+            img.onclick = () => openLightbox(p.url, p.filename);
+
+            item.appendChild(img);
+            galleryGrid.appendChild(item);
+          });
+        }
+      );
     }
-
-    // Lightbox: open full image
-    const lightbox = document.getElementById('lightbox');
-    const lbImg = lightbox.querySelector('.lightbox-img');
-    function openLightbox(url) {
-      lbImg.src = url + '?v=' + Date.now();
-      lightbox.classList.remove('hidden');
-    }
-    lightbox.querySelector('.lightbox-close').onclick = () => lightbox.classList.add('hidden');
-    lightbox.querySelector('.lightbox-download').onclick = () => {
-      const url = lbImg.src;
-      const a = document.createElement('a'); a.href = url; a.download = ''; document.body.appendChild(a); a.click(); a.remove();
-    };
-
-    // initial UI: make sure landing has placeholder until settings arrive
-    setLandingCover('');
-
-    // Optional: if you have app.js logic, keep loading it AFTER this script to avoid race conditions.
-    // (Your existing app.js is already included below, so nothing else needed.)
-
   </script>
 
-  <!-- your existing app.js (keeps other logic intact) -->
+  <!-- app.js si lo usas -->
   <script type="module" src="app.js"></script>
+
 </body>
 </html>
