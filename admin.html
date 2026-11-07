@@ -3,22 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Administración • Subida Directa a GitHub</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙️</text></svg>">
+  <title>Panel de Administración • Álbum de Boda</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💍</text></svg>">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="admin-container">
 
-  <!-- Admin Header -->
+  <!-- Header -->
   <header class="admin-header">
     <h1>
-      <span>💍 Gestor de Fotos de Boda</span>
-      <span class="tag">Subida Directa a GitHub</span>
+      <span>💍 Panel de Control del Álbum</span>
     </h1>
     <div class="admin-header-actions">
-      <div id="github-connection-badge" class="status-indicator disconnected">
+      <div id="connection-status-badge" class="status-indicator connected">
         <span class="status-dot"></span>
-        <span id="github-status-text">GitHub: No conectado</span>
+        <span id="connection-status-text">Conectado a la Base de Datos</span>
       </div>
       <a href="index.html" class="btn-primary" target="_blank">
         <span>👁️ Ver Álbum Público</span>
@@ -28,53 +27,11 @@
 
   <main class="admin-main">
 
-    <!-- 1. CONEXIÓN DIRECTA CON GITHUB -->
+    <!-- 1. FOTO DE PORTADA (PANTALLA DE BIENVENIDA) -->
     <section class="admin-card" style="border: 2px solid var(--gold-primary);">
-      <h2 class="admin-card-title">🔑 Conexión Directa con tu Repositorio de GitHub</h2>
-      <p class="admin-card-subtitle">
-        Conecta tu repositorio una sola vez para que cada foto que subas o portada que cambies se guarde directamente en GitHub al instante, sin descargar archivos ni carpetas.
-      </p>
-
-      <div class="compression-controls-grid">
-        <div class="control-group">
-          <label for="gh-repo-input">Repositorio de GitHub (Usuario/Repositorio):</label>
-          <input type="text" id="gh-repo-input" value="boda2/boda2.github.io" placeholder="ej: boda2/boda2.github.io" />
-        </div>
-
-        <div class="control-group">
-          <label for="gh-token-input">Token de GitHub (Personal Access Token):</label>
-          <input type="password" id="gh-token-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />
-        </div>
-
-        <div class="control-group" style="justify-content: flex-end;">
-          <button id="gh-connect-btn" class="btn-primary" style="height: 48px;">
-            <span>⚡ Conectar con GitHub</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Ayuda para generar el token -->
-      <details style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted); cursor: pointer;">
-        <summary style="font-weight: 600; color: var(--gold-dark);">¿Cómo obtener tu Token de GitHub en 30 segundos? (Haz clic aquí)</summary>
-        <div style="background: var(--bg-cream); padding: 1.2rem; border-radius: var(--radius-sm); margin-top: 0.8rem; line-height: 1.6; border: 1px solid var(--border-subtle);">
-          <ol style="margin-left: 1.2rem;">
-            <li>Entra a GitHub e inicia sesión con tu cuenta.</li>
-            <li>Haz clic en este enlace directo: <a href="https://github.com/settings/tokens/new" target="_blank" style="color: var(--gold-dark); font-weight: 600; text-decoration: underline;">Generar Token en GitHub</a>.</li>
-            <li>En <strong>Note</strong> escribe: <code>Album Boda</code>.</li>
-            <li>En <strong>Expiration</strong> puedes elegir <code>No expiration</code> o 90 días.</li>
-            <li>Marca la casilla <strong>repo</strong> (acceso para subir fotos al repositorio).</li>
-            <li>Baja al final y haz clic en el botón verde <strong>Generate token</strong>.</li>
-            <li>Copia el código que te da (empieza con <code>ghp_...</code>) y pégalo arriba. ¡Se quedará guardado en tu navegador!</li>
-          </ol>
-        </div>
-      </details>
-    </section>
-
-    <!-- 2. SUBIR FOTO DE PORTADA DIRECTO A GITHUB -->
-    <section class="admin-card">
       <h2 class="admin-card-title">📸 Foto de Portada (Pantalla de Bienvenida)</h2>
       <p class="admin-card-subtitle">
-        Sube la foto principal de bienvenida. Al hacer clic en "Subir a GitHub", se guarda de inmediato en tu carpeta <code>photos/portada.jpg</code>.
+        Esta es la foto que sale al abrir el álbum. Selecciona tu foto y se guardará directamente.
       </p>
 
       <div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: center;">
@@ -84,43 +41,42 @@
             <img id="cover-preview-img" src="placeholder.svg" alt="Foto de Portada" style="width: 100%; height: 100%; object-fit: cover;" />
             <div style="position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; padding: 1rem;">
               <div style="width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--gold-light); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 1.1rem; color: var(--gold-light); margin-bottom: 0.5rem;">S &amp; L</div>
-              <span id="cover-preview-title" style="font-family: var(--font-display); font-size: 1.3rem;">Samuel &amp; Lisbeth</span>
+              <span id="cover-preview-names" style="font-family: var(--font-display); font-size: 1.3rem;">Samuel &amp; Lisbeth</span>
               <span style="font-size: 0.8rem; color: var(--gold-light); margin-top: 0.3rem;">Vista previa de portada</span>
             </div>
           </div>
         </div>
 
-        <!-- Controles -->
-        <div style="flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 1.2rem;">
+        <!-- Controles para subir portada -->
+        <div style="flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 1rem;">
           <input type="file" id="cover-file-input" accept="image/*" class="file-input" />
           
           <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-            <button id="choose-cover-btn" class="btn-secondary">
-              <span>🖼️ Elegir Foto de Portada</span>
+            <button id="choose-cover-btn" class="btn-secondary" style="font-size: 1rem; padding: 0.9rem 1.8rem;">
+              <span>📁 Examinar Foto de Portada</span>
             </button>
-            <button id="upload-cover-gh-btn" class="btn-primary" disabled>
-              <span>🚀 Subir Portada Directo a GitHub</span>
+            <button id="save-cover-btn" class="btn-primary" style="font-size: 1rem; padding: 0.9rem 1.8rem;" disabled>
+              <span>💾 Guardar Portada</span>
             </button>
           </div>
 
-          <div id="cover-upload-status" style="font-size: 0.95rem; color: var(--text-dark); background: var(--bg-cream); padding: 0.8rem 1.2rem; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
-            Estado: <span id="cover-status-text" style="color: var(--text-muted);">Selecciona una foto para subirla directamente a GitHub.</span>
+          <div id="cover-status" style="font-size: 0.95rem; background: var(--bg-cream); padding: 0.8rem 1.2rem; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+            Estado: <span id="cover-status-text" style="color: var(--text-muted);">Elige una foto para tu portada y pulsa "Guardar Portada".</span>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- 3. SUBIR FOTOS DE MOMENTOS DIRECTO A GITHUB -->
+    <!-- 2. SUBIR FOTOS DE LOS MOMENTOS -->
     <section class="admin-card">
-      <h2 class="admin-card-title">📸 Subir Fotos en Alta Calidad a GitHub</h2>
+      <h2 class="admin-card-title">📷 Subir Fotos a los Momentos</h2>
       <p class="admin-card-subtitle">
-        Selecciona las fotos de tu boda y se subirán directamente a la carpeta <code>photos/</code> en GitHub en alta calidad para que todos puedan verlas y descargarlas.
+        Selecciona el momento (ej: La Ceremonia, La Recepción), examina las fotos de tu computadora o celular y pulsa "Guardar Fotos".
       </p>
 
-      <!-- Controles de Momento y Opciones -->
       <div class="compression-controls-grid">
         <div class="control-group">
-          <label for="target-album-select">Momento / Álbum:</label>
+          <label for="target-album-select">Selecciona el Momento / Álbum:</label>
           <select id="target-album-select">
             <option value="la-ceremonia">La Ceremonia</option>
             <option value="la-recepcion">La Recepción & Fiesta</option>
@@ -129,93 +85,81 @@
         </div>
 
         <div class="control-group">
-          <label for="photo-quality-select">Calidad de Visualización:</label>
-          <select id="photo-quality-select">
-            <option value="ultra_hd" selected>Ultra HD (2560px - Máxima nitidez en PC y Móviles)</option>
-            <option value="original">100% Original (Sin ninguna reducción)</option>
-            <option value="full_hd">Full HD (1920px)</option>
-          </select>
+          <label>Acción:</label>
+          <button id="choose-photos-btn" class="btn-secondary" style="height: 48px;">
+            <span>📁 Examinar Fotos de la Boda</span>
+          </button>
+          <input type="file" id="photos-file-input" accept="image/*" multiple class="file-input">
         </div>
       </div>
 
-      <!-- Dropzone para fotos -->
-      <div id="dropzone" class="dropzone">
-        <input type="file" id="photos-file-input" accept="image/*" multiple class="file-input">
-        <div class="dropzone-icon">📷</div>
-        <h3 class="dropzone-title">Haz clic aquí o arrastra tus fotos de la boda</h3>
-        <p class="dropzone-subtitle">Puedes seleccionar múltiples fotos a la vez (JPG, PNG, WebP)</p>
-      </div>
-
-      <!-- Barra de Progreso de Subida Directa -->
-      <div id="upload-progress-container" class="hidden" style="margin-top: 1.5rem;">
+      <!-- Barra de progreso -->
+      <div id="upload-progress-container" class="hidden" style="margin: 1.5rem 0;">
         <div class="progress-bar">
           <div id="upload-progress-bar" class="progress-fill" style="width: 0%;"></div>
         </div>
         <div id="upload-progress-label" style="text-align: center; margin-top: 0.6rem; font-weight: 600; color: var(--gold-dark);">
-          Preparando subida...
+          Subiendo fotos...
         </div>
       </div>
 
-      <!-- Botón de Subida Directa a GitHub -->
+      <!-- Botón para Guardar las Fotos -->
       <div id="upload-actions-container" class="hidden" style="margin-top: 1.5rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-        <button id="upload-photos-gh-btn" class="btn-primary" style="font-size: 1.05rem; padding: 1rem 2.2rem;">
-          <span>🚀 Subir <span id="queue-count-badge">0</span> Fotos Directo a GitHub</span>
+        <button id="save-photos-btn" class="btn-primary" style="font-size: 1.05rem; padding: 1rem 2.5rem;">
+          <span>💾 Guardar <span id="queue-count-badge">0</span> Fotos en el Álbum</span>
         </button>
         <button id="clear-queue-btn" class="btn-secondary">
-          <span>🧹 Cancelar selección</span>
+          <span>Limpiar selección</span>
         </button>
       </div>
 
-      <!-- Grid de previsualización -->
+      <!-- Previsualización de fotos seleccionadas -->
       <div id="compressed-grid" class="compressed-grid"></div>
     </section>
 
-    <!-- 4. SUBIR MÚSICA DIRECTO A GITHUB -->
+    <!-- 3. MÚSICA DE LA BODA (VARIAS CANCIONES / PLAYLIST) -->
     <section class="admin-card">
-      <h2 class="admin-card-title">🎵 Subir Canción de Boda Directo a GitHub</h2>
+      <h2 class="admin-card-title">🎵 Canciones de la Boda (Playlist)</h2>
       <p class="admin-card-subtitle">
-        Sube el archivo de música que sonará en el álbum directamente a <code>music/cancion.mp3</code> en GitHub.
+        Puedes subir una o varias canciones que sonarán en el reproductor de tu álbum.
       </p>
 
-      <div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: center;">
-        <div style="flex: 1; min-width: 280px; max-width: 440px; background: var(--bg-cream); border-radius: var(--radius-md); padding: 1.5rem; border: 1px solid var(--border-subtle);">
-          <div style="font-weight: 600; margin-bottom: 0.5rem; color: var(--text-dark);">Vista previa de la canción:</div>
-          <audio id="admin-audio-preview" controls style="width: 100%; margin-bottom: 0.8rem;"></audio>
-          <div style="font-size: 0.85rem; color: var(--text-muted);">
-            Canción actual: <strong id="admin-music-status" style="color: var(--gold-dark);">music/cancion.mp3</strong>
-          </div>
-        </div>
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+        <button id="choose-music-btn" class="btn-secondary">
+          <span>📁 Examinar Canción (MP3 / WAV / M4A)</span>
+        </button>
+        <button id="save-music-btn" class="btn-primary" disabled>
+          <span>💾 Guardar Canción en el Álbum</span>
+        </button>
+        <input type="file" id="music-file-input" accept="audio/*" class="file-input">
+      </div>
 
-        <div style="flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 1rem;">
-          <input type="file" id="music-file-input" accept="audio/*" class="file-input" />
-          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-            <button id="choose-music-btn" class="btn-secondary">
-              <span>🎵 Seleccionar Archivo de Audio (MP3)</span>
-            </button>
-            <button id="upload-music-gh-btn" class="btn-primary" disabled>
-              <span>🚀 Subir Canción Directo a GitHub</span>
-            </button>
-          </div>
-          <div id="music-upload-status" style="font-size: 0.9rem; color: var(--text-muted);">
-            Selecciona un archivo MP3 para subirlo directamente a la carpeta <code>music/</code> de tu repositorio.
-          </div>
-        </div>
+      <div id="music-upload-status" style="font-size: 0.95rem; margin-bottom: 1.5rem; color: var(--text-muted);">
+        Elige un archivo de música para guardarlo en la lista.
+      </div>
+
+      <!-- Lista de Canciones Guardadas -->
+      <h3 style="font-family: var(--font-display); font-size: 1.2rem; margin-bottom: 0.8rem; color: var(--text-dark);">
+        Canciones configuradas en el álbum:
+      </h3>
+      <div id="playlist-container" class="albums-list">
+        <div class="loading">Cargando canciones...</div>
       </div>
     </section>
 
-    <!-- 5. GESTIÓN DE MOMENTOS Y TEXTOS -->
+    <!-- 4. GESTIÓN DE MOMENTOS (CREAR O BORRAR) -->
     <section class="admin-card">
-      <h2 class="admin-card-title">🗂️ Momentos del Álbum</h2>
-      <p class="admin-card-subtitle">Crea nuevos momentos para organizar las fotografías</p>
+      <h2 class="admin-card-title">🗂️ Crear Nuevos Momentos</h2>
+      <p class="admin-card-subtitle">Agrega más capítulos si deseas (ej: "El Baile", "La Cena", "Momentos Familiares")</p>
 
       <div class="compression-controls-grid">
         <div class="control-group">
           <label for="new-album-name">Nombre del momento:</label>
-          <input type="text" id="new-album-name" placeholder="Ej: La Fiesta" />
+          <input type="text" id="new-album-name" placeholder="Ej: Fiesta y Baile" />
         </div>
         <div class="control-group">
           <label for="new-album-desc">Descripción corta:</label>
-          <input type="text" id="new-album-desc" placeholder="Ej: Bailando y celebrando" />
+          <input type="text" id="new-album-desc" placeholder="Ej: Disfrutando en la pista de baile" />
         </div>
         <div class="control-group" style="justify-content: flex-end;">
           <button id="create-album-btn" class="btn-primary" style="height: 48px;">
@@ -225,7 +169,33 @@
       </div>
 
       <div id="moments-list" class="albums-list">
-        <div class="loading">Cargando momentos actuales...</div>
+        <div class="loading">Cargando momentos...</div>
+      </div>
+    </section>
+
+    <!-- 5. NOMBRES Y FECHA DE LOS NOVIOS -->
+    <section class="admin-card">
+      <h2 class="admin-card-title">✏️ Nombres y Fecha de la Boda</h2>
+      <p class="admin-card-subtitle">Modifica los nombres que aparecen en la portada y en todo el álbum</p>
+
+      <div class="compression-controls-grid">
+        <div class="control-group">
+          <label for="settings-names">Nombres de los Novios:</label>
+          <input type="text" id="settings-names" value="Samuel & Lisbeth" />
+        </div>
+        <div class="control-group">
+          <label for="settings-subtitle">Subtítulo:</label>
+          <input type="text" id="settings-subtitle" value="Nuestra Boda • Un Amor Para Siempre" />
+        </div>
+        <div class="control-group">
+          <label for="settings-date">Fecha:</label>
+          <input type="text" id="settings-date" value="20 • Noviembre • 2024" />
+        </div>
+        <div class="control-group" style="justify-content: flex-end;">
+          <button id="save-settings-btn" class="btn-primary" style="height: 48px;">
+            <span>💾 Guardar Nombres</span>
+          </button>
+        </div>
       </div>
     </section>
 

@@ -1,48 +1,62 @@
 // ========================================================
 //  NUESTRO ÁLBUM DE BODA - APP.JS
-//  Carga fluida, desplazamiento continuo y descarga en calidad original
+//  Sincronización en tiempo real con Firebase y Almacenamiento
 // ========================================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import {
   getFirestore,
-  collection,
-  query,
-  orderBy,
-  getDocs,
   doc,
-  getDoc
+  collection,
+  onSnapshot,
+  query,
+  orderBy
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-// Global state
-let albumData = {
-  settings: {
-    coupleNames: "Samuel & Lisbeth",
-    subtitle: "Un amor para toda la vida",
-    date: "20 • Noviembre • 2024",
-    welcomeMessage: "Gracias por acompañarnos y celebrar el día más feliz de nuestras vidas. Desliza hacia abajo para revivir cada instante con nosotros.",
-    coverUrl: ""
-  },
-  albums: []
+// Configuración de Firebase del proyecto
+const firebaseConfig = {
+  apiKey: "AIzaSyAzyFSpQSlo5ZrV-OioFxvgyPMsRLvELKQ",
+  authDomain: "boda-725be.firebaseapp.com",
+  projectId: "boda-725be",
+  storageBucket: "boda-725be.firebasestorage.app",
+  messagingSenderId: "970840545058",
+  appId: "1:970840545058:web:a49837df3e80f0a8cdf77b"
 };
 
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Estado global
+let albumSettings = {
+  coupleNames: "Samuel & Lisbeth",
+  subtitle: "Nuestra Boda • Un Amor Para Siempre",
+  date: "20 • Noviembre • 2024",
+  welcomeMessage: "Gracias por acompañarnos y celebrar el día más feliz de nuestras vidas.",
+  coverUrl: "placeholder.svg",
+  playlist: [
+    { title: "Vals de Boda", url: "https://assets.mixkit.co/music/preview/mixkit-wedding-waltz-296.mp3" }
+  ]
+};
+
+let albumsMap = new Map();
+let allPhotosList = [];
 let currentFilter = "all";
 let currentDisplayedPhotos = [];
 let currentPhotoIndex = 0;
 let likedPhotos = new Set();
 
-// Load liked photos from localStorage
+// Cargar "Me gusta" guardados
 try {
   const savedLikes = localStorage.getItem("boda_liked_photos");
   if (savedLikes) likedPhotos = new Set(JSON.parse(savedLikes));
-} catch (e) {
-  console.warn("No localStorage access", e);
-}
+} catch (_) {}
 
 // DOM References
 const landingSection = document.getElementById("landing-section");
 const viewAlbumBtn = document.getElementById("view-album-btn");
 const mainContent = document.getElementById("main-content");
+const returnLandingBtn = document.getElementById("return-landing-btn");
+const footerReturnBtn = document.getElementById("footer-return-btn");
 
 const heroTitle = document.getElementById("hero-title");
 const heroSubtitle = document.getElementById("hero-subtitle");
@@ -70,13 +84,19 @@ const lightboxDownload = document.getElementById("lightbox-download");
 const lightboxShare = document.getElementById("lightbox-share");
 const lightboxFilmstrip = document.getElementById("lightbox-filmstrip");
 
-// Music Player
+// Music Widget DOM
+const musicWidget = document.getElementById("music-widget");
 const musicToggleBtn = document.getElementById("music-toggle-btn");
+const musicLabel = document.getElementById("music-label");
+const musicPrevBtn = document.getElementById("music-prev-btn");
+const musicNextBtn = document.getElementById("music-next-btn");
 const weddingAudio = document.getElementById("wedding-audio");
+
+let currentTrackIndex = 0;
 let isAudioPlaying = false;
 
 // ========================================================
-// 1. PARTICLE CANVAS (PARTÍCULAS DORADAS FLOTANTES)
+// 1. PARTÍCULAS DORADAS DE FONDO
 // ========================================================
 function initParticles() {
   const canvas = document.getElementById("particle-canvas");
@@ -140,258 +160,218 @@ function initParticles() {
 }
 
 // ========================================================
-// 2. AUDIO PLAYER
+// 2. REPRODUCTOR DE PLAYLIST (VARIAS CANCIONES)
 // ========================================================
 function initAudio() {
-  if (!musicToggleBtn || !weddingAudio) return;
+  if (!weddingAudio || !musicWidget) return;
 
-  weddingAudio.volume = 0.35;
+  weddingAudio.volume = 0.4;
+
+  function loadTrack(index) {
+    const playlist = albumSettings.playlist || [];
+    if (playlist.length === 0) return;
+
+    if (index < 0) index = playlist.length - 1;
+    if (index >= playlist.length) index = 0;
+    currentTrackIndex = index;
+
+    const track = playlist[currentTrackIndex];
+    weddingAudio.src = track.url;
+    musicLabel.textContent = track.title || "Canción de Boda";
+
+    if (isAudioPlaying) {
+      weddingAudio.play().catch(() => {});
+    }
+  }
 
   musicToggleBtn.addEventListener("click", () => {
+    const playlist = albumSettings.playlist || [];
+    if (playlist.length === 0) {
+      showToast("No hay canciones configuradas aún.");
+      return;
+    }
+
+    if (!weddingAudio.src) {
+      loadTrack(0);
+    }
+
     if (!isAudioPlaying) {
       weddingAudio.play().then(() => {
         isAudioPlaying = true;
-        musicToggleBtn.classList.add("playing");
-        musicToggleBtn.querySelector(".music-label").textContent = "Pausar";
+        musicWidget.classList.add("playing");
       }).catch(err => {
-        console.log("Audio play blocked by browser:", err);
+        console.log("Audio bloqueado:", err);
       });
     } else {
       weddingAudio.pause();
       isAudioPlaying = false;
-      musicToggleBtn.classList.remove("playing");
-      musicToggleBtn.querySelector(".music-label").textContent = "Música";
+      musicWidget.classList.remove("playing");
     }
   });
+
+  musicNextBtn.addEventListener("click", () => {
+    loadTrack(currentTrackIndex + 1);
+  });
+
+  musicPrevBtn.addEventListener("click", () => {
+    loadTrack(currentTrackIndex - 1);
+  });
+
+  // Al terminar una canción, pasa a la siguiente automáticamente
+  weddingAudio.addEventListener("ended", () => {
+    loadTrack(currentTrackIndex + 1);
+  });
+
+  // Inicializar pista 0 si existe
+  if (albumSettings.playlist && albumSettings.playlist.length > 0) {
+    loadTrack(0);
+  }
 }
 
 // ========================================================
-// 3. CARGA DE DATOS (LOCAL GITHUB JSON + FIREBASE FALLBACK)
+// 3. SINCRONIZACIÓN EN TIEMPO REAL CON FIREBASE
 // ========================================================
-async function loadData() {
-  let loadedFromLocal = false;
+function initRealtimeData() {
+  // 1. Escuchar portada, nombres y playlist en tiempo real
+  const settingsDoc = doc(db, "meta", "settings");
+  onSnapshot(settingsDoc, (snap) => {
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data.coverUrl) {
+        albumSettings.coverUrl = data.coverUrl;
+        setLandingCover(data.coverUrl);
+      }
+      if (data.coupleNames) {
+        albumSettings.coupleNames = data.coupleNames;
+        heroTitle.textContent = data.coupleNames;
+        document.title = `Álbum de Boda • ${data.coupleNames}`;
+      }
+      if (data.subtitle) {
+        albumSettings.subtitle = data.subtitle;
+        heroSubtitle.textContent = data.subtitle;
+      }
+      if (data.date) {
+        albumSettings.date = data.date;
+        heroDate.textContent = data.date;
+      }
+      if (data.welcomeMessage) {
+        headerDesc.textContent = data.welcomeMessage;
+      }
+      if (data.playlist && Array.isArray(data.playlist) && data.playlist.length > 0) {
+        albumSettings.playlist = data.playlist;
+        if (weddingAudio && !weddingAudio.src) {
+          weddingAudio.src = data.playlist[0].url;
+          musicLabel.textContent = data.playlist[0].title || "Canción";
+        }
+      }
+    }
+  });
 
-  // 1. Intentar cargar data/albums.json (almacenado en GitHub)
+  // 2. Escuchar momentos (álbumes) en tiempo real
+  const albumsQuery = query(collection(db, "albums"), orderBy("createdAt", "desc"));
+  onSnapshot(albumsQuery, (snap) => {
+    albumsMap.clear();
+    snap.forEach((docSnap) => {
+      const a = docSnap.data();
+      a.id = docSnap.id;
+      a.photos = [];
+      albumsMap.set(a.id, a);
+    });
+
+    renderFilterPills();
+    renderMomentsCards();
+    updateGallery();
+  });
+
+  // 3. Escuchar fotos en tiempo real
+  const photosQuery = query(collection(db, "photos"), orderBy("createdAt", "desc"));
+  onSnapshot(photosQuery, (snap) => {
+    allPhotosList = [];
+
+    // Limpiar fotos dentro de cada momento
+    albumsMap.forEach((alb) => { alb.photos = []; });
+
+    snap.forEach((docSnap) => {
+      const p = docSnap.data();
+      p.id = docSnap.id;
+      allPhotosList.push(p);
+
+      if (albumsMap.has(p.albumId)) {
+        albumsMap.get(p.albumId).photos.push(p);
+      }
+    });
+
+    renderMomentsCards();
+    updateGallery();
+  });
+
+  // Cargar datos por defecto de data/albums.json si Firebase tarda
+  loadLocalJsonFallback();
+}
+
+async function loadLocalJsonFallback() {
   try {
     const res = await fetch("data/albums.json?v=" + Date.now());
     if (res.ok) {
       const data = await res.json();
-      if (data && data.albums && data.albums.length > 0) {
-        albumData = data;
-        loadedFromLocal = true;
-      }
-    }
-  } catch (err) {
-    console.warn("No se pudo cargar data/albums.json local, intentando Firebase...", err);
-  }
-
-  // 2. Intentar Firebase si no cargó o no hay momentos
-  try {
-    const firebaseConfig = {
-      apiKey: "AIzaSyAzyFSpQSlo5ZrV-OioFxvgyPMsRLvELKQ",
-      authDomain: "boda-725be.firebaseapp.com",
-      projectId: "boda-725be",
-      storageBucket: "boda-725be.firebasestorage.app",
-      messagingSenderId: "970840545058",
-      appId: "1:970840545058:web:a49837df3e80f0a8cdf77b"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    window.db = db;
-
-    try {
-      const settingsSnap = await getDoc(doc(db, "meta", "settings"));
-      if (settingsSnap.exists() && settingsSnap.data().coverUrl) {
-        albumData.settings.coverUrl = settingsSnap.data().coverUrl;
-      }
-    } catch (_) {}
-
-    if (!loadedFromLocal || albumData.albums.length === 0) {
-      const albumsSnap = await getDocs(query(collection(db, "albums"), orderBy("createdAt", "desc")));
-      if (!albumsSnap.empty) {
-        const photosSnap = await getDocs(query(collection(db, "photos"), orderBy("createdAt", "desc")));
-        const fbAlbums = [];
-
-        albumsSnap.forEach(docSnap => {
-          const a = docSnap.data();
-          const albId = docSnap.id;
-          const photos = [];
-          photosSnap.forEach(pSnap => {
-            const p = pSnap.data();
-            if (p.albumId === albId) {
-              photos.push({
-                id: pSnap.id,
-                url: p.url,
-                originalUrl: p.originalUrl || p.url,
-                title: p.filename || "Momento especial",
-                caption: p.caption || ""
-              });
-            }
-          });
-
-          fbAlbums.push({
-            id: albId,
-            name: a.name,
-            description: a.description || `${photos.length} fotografías inolvidables`,
-            coverUrl: a.coverUrl || (photos[0] ? photos[0].url : "placeholder.svg"),
-            photos: photos
-          });
-        });
-
-        if (fbAlbums.length > 0) {
-          albumData.albums = fbAlbums;
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("Firebase no disponible. Usando datos locales.", err);
-  }
-
-  // 3. Detección automática de fotos subidas directamente a la carpeta photos/ de GitHub
-  try {
-    const ghRepo = localStorage.getItem("boda_gh_repo") || "boda2/boda2.github.io";
-    const ghRes = await fetch(`https://api.github.com/repos/${ghRepo}/contents/photos?v=` + Date.now());
-    if (ghRes.ok) {
-      const files = await ghRes.json();
-      if (Array.isArray(files)) {
-        // Detectar si subieron una foto de portada directamente a GitHub
-        const portadaFile = files.find(f => f.name.toLowerCase().startsWith("portada."));
-        if (portadaFile) {
-          albumData.settings.coverUrl = portadaFile.path;
-        }
-
-        // Buscar fotos de boda subidas a photos/
-        const existingUrls = new Set();
-        albumData.albums.forEach(a => (a.photos || []).forEach(p => existingUrls.add(p.url)));
-
-        const newPhotos = files.filter(f => 
-          f.type === "file" && 
-          /\.(jpg|jpeg|png|webp)$/i.test(f.name) && 
-          !f.name.toLowerCase().startsWith("portada.") &&
-          !existingUrls.has(f.path)
-        );
-
-        if (newPhotos.length > 0) {
-          let targetAlb = albumData.albums[0];
-          if (!targetAlb) {
-            targetAlb = { id: "fotos-boda", name: "Fotos de la Boda", photos: [] };
-            albumData.albums.push(targetAlb);
-          }
-          if (!targetAlb.photos) targetAlb.photos = [];
-          newPhotos.forEach(f => {
-            targetAlb.photos.push({
-              id: f.sha,
-              url: f.path,
-              originalUrl: f.path,
-              title: f.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "),
-              caption: ""
-            });
-          });
-        }
+      if (data.settings && !landingSection.style.backgroundImage) {
+        setLandingCover(data.settings.coverUrl);
       }
     }
   } catch (_) {}
+}
 
-  // Renderizar contenido
-  applySettings(albumData.settings);
-  renderFilterPills(albumData.albums);
-  renderMomentsCards(albumData.albums);
-  displayPhotos("all"); // Mostrar todas las fotos por defecto para visualización continua al deslizar
+function setLandingCover(url) {
+  if (!url) return;
+  const busted = url + (url.includes("?") ? "&" : "?") + "v=" + Date.now();
+  landingSection.style.backgroundImage = `url("${busted}")`;
 }
 
 // ========================================================
-// 4. APLICAR CONFIGURACIONES A HERO & HEADER
+// 4. FILTROS Y TARJETAS DE MOMENTOS
 // ========================================================
-function applySettings(settings) {
-  if (!settings) return;
-
-  if (settings.coupleNames) {
-    heroTitle.textContent = settings.coupleNames;
-    document.title = `Álbum de Boda • ${settings.coupleNames}`;
-  }
-  if (settings.subtitle) heroSubtitle.textContent = settings.subtitle;
-  if (settings.date) heroDate.textContent = settings.date;
-  if (settings.welcomeMessage) headerDesc.textContent = settings.welcomeMessage;
-
-  // Imagen de Portada
-  if (settings.coverUrl) {
-    const busted = settings.coverUrl + (settings.coverUrl.includes("?") ? "&" : "?") + "v=" + Date.now();
-    landingSection.style.backgroundImage = `url("${busted}")`;
-  } else {
-    landingSection.style.backgroundImage = `url("placeholder.svg")`;
-  }
-
-  // Canción de Boda (Audio)
-  if (settings.musicUrl && weddingAudio) {
-    const audioSrc = weddingAudio.querySelector("source");
-    if (audioSrc) {
-      audioSrc.src = settings.musicUrl;
-      weddingAudio.load();
-    } else {
-      weddingAudio.src = settings.musicUrl;
-    }
-  }
-}
-
-// ========================================================
-// 5. PESTAÑAS DE FILTRO (STICKY NAV)
-// ========================================================
-function renderFilterPills(albums) {
-  if (!filterPillsContainer) return;
+function renderFilterPills() {
   filterPillsContainer.innerHTML = "";
 
-  // Botón "Todas las Fotos"
   const allBtn = document.createElement("button");
-  allBtn.className = "filter-pill active";
+  allBtn.className = currentFilter === "all" ? "filter-pill active" : "filter-pill";
   allBtn.textContent = "Todas las Fotos";
   allBtn.onclick = () => {
     setActivePill(allBtn);
-    displayPhotos("all");
-    gallerySection.scrollIntoView({ behavior: "smooth", block: "start" });
+    currentFilter = "all";
+    updateGallery();
   };
   filterPillsContainer.appendChild(allBtn);
 
-  // Botón por cada momento
-  albums.forEach(album => {
+  albumsMap.forEach((album) => {
     const pill = document.createElement("button");
-    pill.className = "filter-pill";
+    pill.className = currentFilter === album.id ? "filter-pill active" : "filter-pill";
     pill.textContent = album.name;
     pill.onclick = () => {
       setActivePill(pill);
-      displayPhotos(album.id);
-      gallerySection.scrollIntoView({ behavior: "smooth", block: "start" });
+      currentFilter = album.id;
+      updateGallery();
     };
     filterPillsContainer.appendChild(pill);
   });
 }
 
-function setActivePill(activeBtn) {
+function setActivePill(btn) {
   document.querySelectorAll(".filter-pill").forEach(p => p.classList.remove("active"));
-  activeBtn.classList.add("active");
+  btn.classList.add("active");
 }
 
-// ========================================================
-// 6. RENDERIZAR TARJETAS DE MOMENTOS
-// ========================================================
-function renderMomentsCards(albums) {
-  if (!albumsGrid) return;
+function renderMomentsCards() {
   albumsGrid.innerHTML = "";
 
-  if (!albums || albums.length === 0) {
-    albumsGrid.innerHTML = `
-      <div class="loading">
-        <p>Aún no se han agregado momentos al álbum.</p>
-        <p style="font-size: 0.95rem; margin-top: 0.5rem; opacity: 0.7;">
-          Puedes agregar fotos desde el <a href="admin.html" style="color: var(--gold-dark); text-decoration: underline;">Panel de Administración</a>.
-        </p>
-      </div>`;
+  if (albumsMap.size === 0) {
+    albumsGrid.innerHTML = '<div class="loading">Cargando momentos inolvidables...</div>';
     return;
   }
 
-  albums.forEach(album => {
+  albumsMap.forEach((album) => {
     const count = (album.photos && album.photos.length) || 0;
-    const cover = album.coverUrl || (album.photos && album.photos[0] ? album.photos[0].url : "placeholder.svg");
+    const cover = (album.photos && album.photos[0] ? album.photos[0].url : album.coverUrl) || "placeholder.svg";
 
     const card = document.createElement("div");
     card.className = "album-card";
@@ -409,11 +389,11 @@ function renderMomentsCards(albums) {
     `;
 
     card.onclick = () => {
-      // Activar pill correspondiente
+      currentFilter = album.id;
       document.querySelectorAll(".filter-pill").forEach(p => {
         if (p.textContent === album.name) setActivePill(p);
       });
-      displayPhotos(album.id);
+      updateGallery();
       gallerySection.scrollIntoView({ behavior: "smooth", block: "start" });
     };
 
@@ -422,34 +402,23 @@ function renderMomentsCards(albums) {
 }
 
 // ========================================================
-// 7. DESPLIEGUE CONTINUO DE FOTOS (GALERÍA)
+// 5. GALERÍA DE FOTOS (ALTA CALIDAD & DESCARGA)
 // ========================================================
-function displayPhotos(albumFilterId = "all") {
-  currentFilter = albumFilterId;
+function updateGallery() {
   galleryGrid.innerHTML = "";
 
-  if (albumFilterId === "all") {
-    // Combinar todas las fotos de todos los momentos
-    const all = [];
-    albumData.albums.forEach(alb => {
-      if (alb.photos) {
-        alb.photos.forEach(p => {
-          all.push({ ...p, albumName: alb.name });
-        });
-      }
-    });
-    currentDisplayedPhotos = all;
-    gallerySubtitle.textContent = "Recuerdos Inolvidables";
+  if (currentFilter === "all") {
+    currentDisplayedPhotos = allPhotosList;
+    gallerySubtitle.textContent = "Recuerdos en Alta Calidad";
     galleryTitle.textContent = "Todas las Fotografías";
-    galleryDesc.textContent = `Revive los ${all.length} momentos de nuestra boda. Toca cualquier foto para ampliarla o usa el botón ⬇ para descargarla en su calidad original.`;
+    galleryDesc.textContent = `Colección completa de ${allPhotosList.length} momentos inolvidables de nuestra boda. Toca cualquier foto para ampliarla o usa ⬇ para descargarla.`;
   } else {
-    // Filtrar fotos por momento
-    const targetAlbum = albumData.albums.find(a => a.id === albumFilterId);
+    const targetAlbum = albumsMap.get(currentFilter);
     if (targetAlbum) {
-      currentDisplayedPhotos = (targetAlbum.photos || []).map(p => ({ ...p, albumName: targetAlbum.name }));
+      currentDisplayedPhotos = targetAlbum.photos || [];
       gallerySubtitle.textContent = "Momento de Boda";
       galleryTitle.textContent = targetAlbum.name;
-      galleryDesc.textContent = targetAlbum.description || `Colección de ${currentDisplayedPhotos.length} fotos de este momento especial.`;
+      galleryDesc.textContent = targetAlbum.description || `Colección de ${currentDisplayedPhotos.length} fotos de este momento.`;
     } else {
       currentDisplayedPhotos = [];
     }
@@ -460,16 +429,14 @@ function displayPhotos(albumFilterId = "all") {
     return;
   }
 
-  // Renderizar fotos en la cuadrícula
   currentDisplayedPhotos.forEach((photo, index) => {
     const isLiked = likedPhotos.has(photo.id || photo.url);
     const item = document.createElement("div");
     item.className = "gallery-item";
     item.innerHTML = `
-      <img class="gallery-item-img" src="${photo.url}" alt="${photo.title || 'Foto de boda'}" loading="lazy" onerror="this.src='placeholder.svg'" />
+      <img class="gallery-item-img" src="${photo.url}" alt="${photo.filename || 'Foto de boda'}" loading="lazy" onerror="this.src='placeholder.svg'" />
       <div class="gallery-item-overlay">
-        <div class="gallery-item-title">${photo.title || 'Momento especial'}</div>
-        <div class="gallery-item-caption">${photo.albumName ? photo.albumName + (photo.caption ? ' • ' + photo.caption : '') : (photo.caption || '')}</div>
+        <div class="gallery-item-title">${photo.filename || 'Momento especial'}</div>
       </div>
       <div class="gallery-item-actions">
         <button class="gallery-item-download" title="Descargar en calidad original">⬇</button>
@@ -479,15 +446,14 @@ function displayPhotos(albumFilterId = "all") {
       </div>
     `;
 
-    // Clic en la foto para abrir en Lightbox
+    // Abrir en pantalla completa al tocar la foto
     item.querySelector(".gallery-item-img").onclick = () => openLightbox(index);
     item.querySelector(".gallery-item-overlay").onclick = () => openLightbox(index);
 
-    // Botón de Descarga Directa en Calidad Original
-    const downloadBtn = item.querySelector(".gallery-item-download");
-    downloadBtn.onclick = (e) => {
+    // Botón de Descarga Directa
+    item.querySelector(".gallery-item-download").onclick = (e) => {
       e.stopPropagation();
-      downloadOriginalPhoto(photo, index);
+      downloadPhoto(photo.url, photo.filename || `foto-boda-${index + 1}`);
     };
 
     // Botón de Corazón
@@ -501,41 +467,26 @@ function displayPhotos(albumFilterId = "all") {
   });
 }
 
-// ========================================================
-// 8. DESCARGA EN CALIDAD ORIGINAL (BLOB DIRECT DOWNLOAD)
-// ========================================================
-async function downloadOriginalPhoto(photo, index = 0) {
-  const targetUrl = photo.originalUrl || photo.url;
-  const cleanTitle = (photo.title || `boda-samuel-lisbeth-${index + 1}`)
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]/g, "-")
-    .replace(/-+/g, "-");
-  const filename = `${cleanTitle}-calidad-original.jpg`;
-
-  showToast("Iniciando descarga en calidad original... ⏳");
-
+// Descarga en Alta Calidad
+async function downloadPhoto(url, name = "foto-boda") {
+  showToast("Iniciando descarga en alta calidad... ⏳");
   try {
-    // Intentar descarga mediante Blob (fuerza descarga real en móvil y PC)
-    const response = await fetch(targetUrl);
-    if (!response.ok) throw new Error("Error en la respuesta de red");
-    const blob = await response.blob();
+    const res = await fetch(url);
+    const blob = await res.blob();
     const blobUrl = URL.createObjectURL(blob);
-
     const a = document.createElement("a");
     a.href = blobUrl;
-    a.download = filename;
+    a.download = `${name}.jpg`;
     document.body.appendChild(a);
     a.click();
     a.remove();
-
     setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-    showToast("¡Foto descargada en su calidad original! ✅");
-  } catch (err) {
-    console.warn("Descarga directa de blob no permitida por CORS, abriendo enlace directo...", err);
-    // Fallback: abrir y descargar directamente
+    showToast("¡Foto descargada en alta calidad! ✅");
+  } catch (_) {
+    // Fallback directo
     const a = document.createElement("a");
-    a.href = targetUrl;
-    a.download = filename;
+    a.href = url;
+    a.download = `${name}.jpg`;
     a.target = "_blank";
     document.body.appendChild(a);
     a.click();
@@ -544,16 +495,14 @@ async function downloadOriginalPhoto(photo, index = 0) {
   }
 }
 
-// ========================================================
-// 9. SISTEMA DE CORAZONES (REACCIONES)
-// ========================================================
-function toggleLike(photoKey, btn) {
-  if (likedPhotos.has(photoKey)) {
-    likedPhotos.delete(photoKey);
+// Reacciones
+function toggleLike(key, btn) {
+  if (likedPhotos.has(key)) {
+    likedPhotos.delete(key);
     btn.classList.remove("liked");
     btn.textContent = "🤍";
   } else {
-    likedPhotos.add(photoKey);
+    likedPhotos.add(key);
     btn.classList.add("liked");
     btn.textContent = "❤️";
     showToast("¡Te ha gustado esta foto! ❤️");
@@ -564,20 +513,8 @@ function toggleLike(photoKey, btn) {
   } catch (_) {}
 }
 
-function showToast(message) {
-  const existing = document.querySelector(".toast");
-  if (existing) existing.remove();
-
-  const toast = document.createElement("div");
-  toast.className = "toast";
-  toast.innerHTML = `<span>✨</span> <span>${message}</span>`;
-  document.body.appendChild(toast);
-
-  setTimeout(() => toast.remove(), 2800);
-}
-
 // ========================================================
-// 10. LIGHTBOX 2.0 (MODAL DE PANTALLA COMPLETA)
+// 6. LIGHTBOX 2.0 (MODAL DE PANTALLA COMPLETA)
 // ========================================================
 function openLightbox(index) {
   if (!currentDisplayedPhotos || currentDisplayedPhotos.length === 0) return;
@@ -598,7 +535,7 @@ function updateLightboxContent() {
   if (!photo) return;
 
   lightboxImg.src = photo.url;
-  lightboxTitle.textContent = photo.title || "Momento de Boda";
+  lightboxTitle.textContent = photo.filename || "Momento de Boda";
   lightboxCounter.textContent = `${currentPhotoIndex + 1} de ${currentDisplayedPhotos.length}`;
 
   const thumbs = lightboxFilmstrip.querySelectorAll(".lightbox-thumb");
@@ -625,56 +562,44 @@ function renderFilmstrip() {
 }
 
 function prevPhoto() {
-  if (currentPhotoIndex > 0) {
-    currentPhotoIndex--;
-  } else {
-    currentPhotoIndex = currentDisplayedPhotos.length - 1;
-  }
+  if (currentPhotoIndex > 0) currentPhotoIndex--;
+  else currentPhotoIndex = currentDisplayedPhotos.length - 1;
   updateLightboxContent();
 }
 
 function nextPhoto() {
-  if (currentPhotoIndex < currentDisplayedPhotos.length - 1) {
-    currentPhotoIndex++;
-  } else {
-    currentPhotoIndex = 0;
-  }
+  if (currentPhotoIndex < currentDisplayedPhotos.length - 1) currentPhotoIndex++;
+  else currentPhotoIndex = 0;
   updateLightboxContent();
 }
 
-// Botón de Descarga en el Lightbox (Calidad Original)
 lightboxDownload.addEventListener("click", () => {
   const photo = currentDisplayedPhotos[currentPhotoIndex];
   if (photo) {
-    downloadOriginalPhoto(photo, currentPhotoIndex);
+    downloadPhoto(photo.url, photo.filename || `foto-boda-${currentPhotoIndex + 1}`);
   }
 });
 
-// Botón de Compartir
 lightboxShare.addEventListener("click", async () => {
   const photo = currentDisplayedPhotos[currentPhotoIndex];
   if (!photo) return;
 
-  const shareUrl = photo.originalUrl || photo.url;
   if (navigator.share) {
     try {
       await navigator.share({
         title: "Boda Samuel & Lisbeth",
-        text: `Mira esta hermosa foto de la boda: ${photo.title || ''}`,
-        url: shareUrl
+        text: `Mira esta foto de la boda: ${photo.filename || ''}`,
+        url: photo.url
       });
     } catch (_) {}
   } else {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(photo.url);
       showToast("Enlace copiado al portapapeles 📋");
-    } catch (_) {
-      showToast("Enlace: " + shareUrl);
-    }
+    } catch (_) {}
   }
 });
 
-// Eventos de Navegación del Lightbox
 lightboxClose.addEventListener("click", closeLightbox);
 lightboxPrev.addEventListener("click", prevPhoto);
 lightboxNext.addEventListener("click", nextPhoto);
@@ -686,14 +611,12 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") nextPhoto();
 });
 
-// Gestos táctiles de deslizamiento (Swipe) en móvil
+// Deslizamiento táctil en celular
 let touchStartX = 0;
 let touchEndX = 0;
-
 lightbox.addEventListener("touchstart", (e) => {
   touchStartX = e.changedTouches[0].screenX;
 }, { passive: true });
-
 lightbox.addEventListener("touchend", (e) => {
   touchEndX = e.changedTouches[0].screenX;
   const diff = touchEndX - touchStartX;
@@ -710,7 +633,7 @@ lightbox.addEventListener("click", (e) => {
 });
 
 // ========================================================
-// 11. PANTALLA DE BIENVENIDA Y TRANSICIÓN AL ÁLBUM
+// 7. BLOQUEO DE PORTADA Y TRANSICIÓN
 // ========================================================
 function showAlbum() {
   document.body.classList.remove("on-landing");
@@ -727,20 +650,25 @@ function showLanding() {
 }
 
 viewAlbumBtn.addEventListener("click", showAlbum);
-
-const returnLandingBtn = document.getElementById("return-landing-btn");
 if (returnLandingBtn) returnLandingBtn.addEventListener("click", showLanding);
-
-const footerReturnBtn = document.getElementById("footer-return-btn");
 if (footerReturnBtn) footerReturnBtn.addEventListener("click", showLanding);
 
-// ========================================================
-// 12. INICIALIZACIÓN
-// ========================================================
+function showToast(msg) {
+  const existing = document.querySelector(".toast");
+  if (existing) existing.remove();
+
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.innerHTML = `<span>✨</span> <span>${msg}</span>`;
+  document.body.appendChild(toast);
+
+  setTimeout(() => toast.remove(), 2800);
+}
+
+// Inicialización
 window.addEventListener("DOMContentLoaded", () => {
-  // Asegurar que solo la portada está activa inicialmente
   showLanding();
   initParticles();
   initAudio();
-  loadData();
+  initRealtimeData();
 });

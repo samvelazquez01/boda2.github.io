@@ -14,14 +14,16 @@
 </head>
 <body class="on-landing">
 
-  <!-- Floating Romantic Music Toggle -->
-  <button id="music-toggle-btn" class="music-toggle-btn" aria-label="Música de fondo" title="Activar/Pausar música romántica">
-    <span class="music-icon">🎵</span>
-    <span class="music-label">Música</span>
-  </button>
-  <audio id="wedding-audio" loop preload="none">
-    <source src="https://assets.mixkit.co/music/preview/mixkit-wedding-waltz-296.mp3" type="audio/mpeg">
-  </audio>
+  <!-- Floating Romantic Music Widget (Playlist) -->
+  <div id="music-widget" class="music-widget">
+    <button id="music-prev-btn" class="music-nav-btn" title="Canción anterior">⏮</button>
+    <button id="music-toggle-btn" class="music-toggle-btn" aria-label="Música de fondo" title="Activar/Pausar música romántica">
+      <span class="music-icon">🎵</span>
+      <span id="music-label" class="music-label">Música</span>
+    </button>
+    <button id="music-next-btn" class="music-nav-btn" title="Siguiente canción">⏭</button>
+  </div>
+  <audio id="wedding-audio" preload="none"></audio>
 
   <!-- ==========================================
        PANTALLA ÚNICA DE BIENVENIDA (PORTADA)
