@@ -248,6 +248,51 @@ async function loadData() {
     console.warn("Firebase no disponible. Usando datos locales.", err);
   }
 
+  // 3. Detección automática de fotos subidas directamente a la carpeta photos/ de GitHub
+  try {
+    const ghRepo = localStorage.getItem("boda_gh_repo") || "boda2/boda2.github.io";
+    const ghRes = await fetch(`https://api.github.com/repos/${ghRepo}/contents/photos?v=` + Date.now());
+    if (ghRes.ok) {
+      const files = await ghRes.json();
+      if (Array.isArray(files)) {
+        // Detectar si subieron una foto de portada directamente a GitHub
+        const portadaFile = files.find(f => f.name.toLowerCase().startsWith("portada."));
+        if (portadaFile) {
+          albumData.settings.coverUrl = portadaFile.path;
+        }
+
+        // Buscar fotos de boda subidas a photos/
+        const existingUrls = new Set();
+        albumData.albums.forEach(a => (a.photos || []).forEach(p => existingUrls.add(p.url)));
+
+        const newPhotos = files.filter(f => 
+          f.type === "file" && 
+          /\.(jpg|jpeg|png|webp)$/i.test(f.name) && 
+          !f.name.toLowerCase().startsWith("portada.") &&
+          !existingUrls.has(f.path)
+        );
+
+        if (newPhotos.length > 0) {
+          let targetAlb = albumData.albums[0];
+          if (!targetAlb) {
+            targetAlb = { id: "fotos-boda", name: "Fotos de la Boda", photos: [] };
+            albumData.albums.push(targetAlb);
+          }
+          if (!targetAlb.photos) targetAlb.photos = [];
+          newPhotos.forEach(f => {
+            targetAlb.photos.push({
+              id: f.sha,
+              url: f.path,
+              originalUrl: f.path,
+              title: f.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "),
+              caption: ""
+            });
+          });
+        }
+      }
+    }
+  } catch (_) {}
+
   // Renderizar contenido
   applySettings(albumData.settings);
   renderFilterPills(albumData.albums);
