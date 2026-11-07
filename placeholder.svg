@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1f1e24" />
+      <stop offset="100%" stop-color="#2d2938" />
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f5e1a4" />
+      <stop offset="50%" stop-color="#d4af37" />
+      <stop offset="100%" stop-color="#aa8214" />
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bg)"/>
+  <circle cx="400" cy="270" r="70" fill="none" stroke="url(#gold)" stroke-width="2" opacity="0.6"/>
+  <circle cx="400" cy="270" r="60" fill="none" stroke="url(#gold)" stroke-width="1" stroke-dasharray="4 4" opacity="0.8"/>
+  <path d="M375,260 C375,245 390,235 400,248 C410,235 425,245 425,260 C425,278 400,295 400,295 C400,295 375,278 375,260 Z" fill="url(#gold)" opacity="0.9"/>
+  <text x="400" y="380" font-family="'Playfair Display', Georgia, serif" font-size="24" fill="#f5e1a4" text-anchor="middle" letter-spacing="4">NUESTRA BODA</text>
+  <text x="400" y="415" font-family="'Montserrat', sans-serif" font-size="13" fill="#ffffff" opacity="0.6" text-anchor="middle" letter-spacing="2">CARGANDO FOTOGRAFÍA...</text>
+</svg>

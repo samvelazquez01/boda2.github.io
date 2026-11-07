@@ -1,0 +1,99 @@
+{
+  "settings": {
+    "coupleNames": "Samuel & Lisbeth",
+    "subtitle": "Nuestra Boda • Un Amor Para Siempre",
+    "date": "2024-11-20",
+    "welcomeMessage": "Gracias por acompañarnos y ser parte del día más feliz de nuestras vidas.",
+    "coverUrl": "photos/portada.jpg",
+    "musicUrl": "music/cancion.mp3"
+  },
+  "albums": [
+    {
+      "id": "sesion-previa",
+      "name": "Sesión Previa",
+      "description": "Momentos íntimos antes del gran día",
+      "coverUrl": "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=800&q=80",
+      "photos": [
+        {
+          "id": "p1",
+          "url": "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1600&q=80",
+          "originalUrl": "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=3840&q=100",
+          "title": "Miradas que lo dicen todo",
+          "caption": "Sesión al atardecer"
+        },
+        {
+          "id": "p2",
+          "url": "https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&w=1600&q=80",
+          "originalUrl": "https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&w=3840&q=100",
+          "title": "Caminando juntos",
+          "caption": "Promesa de amor eterno"
+        },
+        {
+          "id": "p3",
+          "url": "https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1600&q=80",
+          "originalUrl": "https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=3840&q=100",
+          "title": "Detalles mágicos",
+          "caption": "Los preparativos del amor"
+        }
+      ]
+    },
+    {
+      "id": "la-ceremonia",
+      "name": "La Ceremonia",
+      "description": "El 'Sí, acepto' ante Dios y nuestros seres queridos",
+      "coverUrl": "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&w=800&q=80",
+      "photos": [
+        {
+          "id": "c1",
+          "url": "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&w=1600&q=80",
+          "originalUrl": "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&w=3840&q=100",
+          "title": "El intercambio de votos",
+          "caption": "Para amarte y respetarte todos los días"
+        },
+        {
+          "id": "c2",
+          "url": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=80",
+          "originalUrl": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=3840&q=100",
+          "title": "Los anillos",
+          "caption": "Símbolo de unión infinita"
+        },
+        {
+          "id": "c3",
+          "url": "https://images.unsplash.com/photo-1545232979-8bf68ee9b1af?auto=format&fit=crop&w=1600&q=80",
+          "originalUrl": "https://images.unsplash.com/photo-1545232979-8bf68ee9b1af?auto=format&fit=crop&w=3840&q=100",
+          "title": "El primer beso como esposos",
+          "caption": "¡Recién casados!"
+        }
+      ]
+    },
+    {
+      "id": "la-recepcion",
+      "name": "La Recepción & Fiesta",
+      "description": "Celebrando la alegría de comenzar este nuevo viaje",
+      "coverUrl": "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=800&q=80",
+      "photos": [
+        {
+          "id": "r1",
+          "url": "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=1600&q=80",
+          "originalUrl": "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=3840&q=100",
+          "title": "El primer baile",
+          "caption": "Nuestra canción especial"
+        },
+        {
+          "id": "r2",
+          "url": "https://images.unsplash.com/photo-1469371670807-013ccf25f16a?auto=format&fit=crop&w=1600&q=80",
+          "originalUrl": "https://images.unsplash.com/photo-1469371670807-013ccf25f16a?auto=format&fit=crop&w=3840&q=100",
+          "title": "Brindis con la familia",
+          "caption": "Por una vida llena de bendiciones"
+        },
+        {
+          "id": "r3",
+          "url": "https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=1600&q=80",
+          "originalUrl": "https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=3840&q=100",
+          "title": "La pista de baile",
+          "caption": "Risas, música y felicidad"
+        }
+      ]
+    }
+  ]
+}

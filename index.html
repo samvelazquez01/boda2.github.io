@@ -2,197 +2,189 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Nuestro Álbum de Boda</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Nuestro Álbum de Boda • Samuel &amp; Lisbeth</title>
+  <meta name="description" content="Álbum de bodas de Samuel &amp; Lisbeth. Un día inolvidable." />
+  <meta property="og:title" content="Nuestro Álbum de Boda • Samuel &amp; Lisbeth" />
+  <meta property="og:description" content="Revive con nosotros los momentos más hermosos de nuestra boda." />
+  <meta property="og:type" content="website" />
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💍</text></svg>">
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
-  <!-- Landing / Cover -->
-  <div id="landing-section" class="landing-section">
+<body class="on-landing">
+
+  <!-- Floating Romantic Music Toggle -->
+  <button id="music-toggle-btn" class="music-toggle-btn" aria-label="Música de fondo" title="Activar/Pausar música romántica">
+    <span class="music-icon">🎵</span>
+    <span class="music-label">Música</span>
+  </button>
+  <audio id="wedding-audio" loop preload="none">
+    <source src="https://assets.mixkit.co/music/preview/mixkit-wedding-waltz-296.mp3" type="audio/mpeg">
+  </audio>
+
+  <!-- ==========================================
+       PANTALLA ÚNICA DE BIENVENIDA (PORTADA)
+       No permite desplazamiento hacia abajo. Solo se ve esto.
+  =========================================== -->
+  <section id="landing-section" class="landing-section">
     <div class="landing-overlay"></div>
+    <canvas id="particle-canvas"></canvas>
+
     <div class="landing-content">
-      <h1 class="landing-title">Samuel & Lisbeth</h1>
-      <p class="landing-subtitle">Un día inolvidable</p>
-      <button id="view-album-btn" class="view-album-btn">Ver Álbum</button>
-    </div>
-  </div>
-
-  <!-- Main content -->
-  <div id="main-content" class="main-content hidden">
-    <header class="header">
-      <div class="header-content">
-        <h1 class="header-title">Nuestros Momentos Especiales</h1>
+      <div class="landing-monogram">
+        <span>S &amp; L</span>
       </div>
-    </header>
 
+      <h1 id="hero-title" class="landing-title">Samuel &amp; Lisbeth</h1>
+
+      <!-- Símbolo real de anillos de boda entrelazados (SVG Oro Real) -->
+      <div class="landing-divider">
+        <span class="line"></span>
+        <div class="wedding-rings-icon" title="Anillos de Boda">
+          <svg width="42" height="28" viewBox="0 0 42 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Anillo 1 -->
+            <ellipse cx="16" cy="14" rx="10" ry="10" stroke="url(#goldRingGrad1)" stroke-width="2.5" fill="none" />
+            <!-- Anillo 2 entrelazado con diamante pequeño -->
+            <ellipse cx="26" cy="14" rx="10" ry="10" stroke="url(#goldRingGrad2)" stroke-width="2.5" fill="none" />
+            <path d="M26 2 L28 4.5 L26 7 L24 4.5 Z" fill="#ffffff" />
+            <defs>
+              <linearGradient id="goldRingGrad1" x1="6" y1="4" x2="26" y2="24" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#fff0c2" />
+                <stop offset="50%" stop-color="#d4af37" />
+                <stop offset="100%" stop-color="#9a7418" />
+              </linearGradient>
+              <linearGradient id="goldRingGrad2" x1="16" y1="4" x2="36" y2="24" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#ffffff" />
+                <stop offset="40%" stop-color="#f7e7b4" />
+                <stop offset="100%" stop-color="#aa841e" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <span class="line"></span>
+      </div>
+
+      <p id="hero-subtitle" class="landing-subtitle">Nuestra Boda • Un Amor Para Siempre</p>
+      <div id="hero-date" class="landing-date">20 • Noviembre • 2024</div>
+
+      <div class="landing-actions">
+        <button id="view-album-btn" class="view-album-btn">
+          <span>Ver Álbum ✨</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       ÁREA DEL ÁLBUM COMPLETO
+       Oculta por defecto (hidden). Solo se muestra al tocar "Ver Álbum".
+  =========================================== -->
+  <div id="main-content" class="main-content hidden">
+    
+    <!-- Header banner con botón para regresar a la portada -->
+    <div class="header">
+      <div class="header-content">
+        <button id="return-landing-btn" class="return-cover-btn" title="Volver a la portada de bienvenida">
+          <span>← Volver a Portada</span>
+        </button>
+        <span class="header-badge">Galería Oficial</span>
+        <h2 class="header-title">Nuestros Momentos Especiales</h2>
+        <p id="header-desc" class="header-subtitle">
+          Gracias por acompañarnos y celebrar el día más feliz de nuestras vidas.
+        </p>
+      </div>
+    </div>
+
+    <!-- Filter & Navigation bar (Sticky) -->
+    <nav class="filter-nav-wrapper">
+      <div class="filter-nav">
+        <div id="filter-pills" class="filter-pills">
+          <button class="filter-pill active" data-filter="all">Todas las Fotos</button>
+        </div>
+        <a href="admin.html" class="nav-admin-link" title="Gestionar y subir fotos">
+          ⚙️ <span>Gestionar Fotos</span>
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Section -->
     <main class="main">
-      <section class="section">
-        <h2 class="section-title">Momentos</h2>
+
+      <!-- Sección 1: Momentos Cards Grid -->
+      <section id="albums-section" class="section">
+        <div class="section-header">
+          <p class="section-subtitle">Capítulos de Nuestro Día</p>
+          <h3 class="section-title">Colección de Momentos</h3>
+        </div>
+
         <div id="albums-grid" class="albums-grid">
-          <div class="loading">Cargando momentos...</div>
+          <div class="loading">Cargando momentos inolvidables...</div>
         </div>
       </section>
 
-      <section id="gallery-section" class="section hidden">
-        <button id="back-btn" class="back-btn">← Volver a Momentos</button>
-        <h2 id="gallery-title" class="section-title"></h2>
-        <div id="gallery-grid" class="gallery-grid"></div>
+      <!-- Sección 2: Galería de Fotos en Alta Calidad -->
+      <section id="gallery-section" class="section">
+        <div class="gallery-section-header">
+          <p id="gallery-subtitle" class="section-subtitle">Recuerdos en Alta Calidad</p>
+          <h2 id="gallery-title" class="section-title">Todas las Fotografías</h2>
+          <p id="gallery-desc" class="gallery-album-desc">
+            Haz clic en cualquier fotografía para verla en pantalla completa o usa el botón ⬇ para descargarla en su calidad original.
+          </p>
+        </div>
+
+        <div id="gallery-grid" class="gallery-grid">
+          <div class="loading">Cargando fotos...</div>
+        </div>
       </section>
+
     </main>
 
-    <div id="lightbox" class="lightbox hidden">
-      <button class="lightbox-close">×</button>
-      <button class="lightbox-prev">‹</button>
-      <button class="lightbox-next">›</button>
-      <button class="lightbox-download" title="Descargar foto">⬇</button>
-      <img class="lightbox-img" src="/placeholder.svg" alt="">
-      <div class="lightbox-counter"></div>
+    <!-- ==========================================
+         LIGHTBOX 2.0 (MODAL DE PANTALLA COMPLETA)
+    =========================================== -->
+    <div id="lightbox" class="lightbox hidden" role="dialog" aria-modal="true">
+      <div class="lightbox-header">
+        <div class="lightbox-info">
+          <div id="lightbox-title" class="lightbox-title-text"></div>
+          <div id="lightbox-counter" class="lightbox-counter-text"></div>
+        </div>
+        <div class="lightbox-actions">
+          <!-- Botón de Descarga en Calidad Original -->
+          <button id="lightbox-download" class="lightbox-btn btn-download" title="Descargar foto en calidad original">
+            <span>⬇</span> <span class="btn-text">Descargar Original</span>
+          </button>
+          <button id="lightbox-share" class="lightbox-btn" title="Compartir foto">🔗</button>
+          <button id="lightbox-close" class="lightbox-btn" title="Cerrar (Esc)">✕</button>
+        </div>
+      </div>
+
+      <div class="lightbox-body">
+        <button id="lightbox-prev" class="lightbox-nav-btn lightbox-prev" title="Foto anterior (←)">‹</button>
+        <img id="lightbox-img" class="lightbox-img" src="placeholder.svg" alt="Fotografía de boda en alta calidad" />
+        <button id="lightbox-next" class="lightbox-nav-btn lightbox-next" title="Foto siguiente (→)">›</button>
+      </div>
+
+      <!-- Bottom Filmstrip -->
+      <div id="lightbox-filmstrip" class="lightbox-filmstrip"></div>
     </div>
+
+    <!-- Romantic Wedding Footer -->
+    <footer class="wedding-footer">
+      <p class="footer-quote">
+        “El amor no se mira con los ojos, sino con el corazón.”
+      </p>
+      <div class="footer-names">Samuel &amp; Lisbeth</div>
+      <p class="footer-meta">Nuestra Boda • Para Siempre</p>
+      <div class="footer-links">
+        <button id="footer-return-btn" class="footer-link-btn">Volver a la Portada ↑</button>
+        <a href="admin.html">Panel de Administración</a>
+      </div>
+    </footer>
+
   </div>
 
-  <!-- Firebase + App logic -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-    import {
-      getFirestore,
-      doc,
-      onSnapshot,
-      collection,
-      query,
-      orderBy,
-      onSnapshot as onSnapshotCol,
-    } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
-
-    // --- FIREBASE CONFIG (igual a tu admin.html) ---
-    const firebaseConfig = {
-      apiKey: "AIzaSyAzyFSpQSlo5ZrV-OioFxvgyPMsRLvELKQ",
-      authDomain: "boda-725be.firebaseapp.com",
-      projectId: "boda-725be",
-      storageBucket: "boda-725be.firebasestorage.app",
-      messagingSenderId: "970840545058",
-      appId: "1:970840545058:web:a49837df3e80f0a8cdf77b",
-      measurementId: "G-4C066E3VN1"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    window.db = db; // compatible con admin.js
-
-    // UI refs
-    const landing = document.getElementById('landing-section');
-    const viewBtn = document.getElementById('view-album-btn');
-    const mainContent = document.getElementById('main-content');
-    const albumsGrid = document.getElementById('albums-grid');
-    const gallerySection = document.getElementById('gallery-section');
-    const galleryGrid = document.getElementById('gallery-grid');
-    const galleryTitle = document.getElementById('gallery-title');
-    const backBtn = document.getElementById('back-btn');
-
-    // Helper: set landing background image safely with cache-busting
-    function setLandingCover(url) {
-      if (!url) {
-        landing.style.backgroundImage = 'url("/placeholder.svg?height=1080&width=1920")';
-        return;
-      }
-      // add timestamp to prevent cached versions
-      const busted = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
-      landing.style.backgroundImage = `url("${busted}")`;
-    }
-
-    // SHOW main content
-    viewBtn.addEventListener('click', () => {
-      mainContent.classList.remove('hidden');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    backBtn.addEventListener('click', () => {
-      gallerySection.classList.add('hidden');
-      document.querySelector('.section').scrollIntoView({ behavior: 'smooth' });
-    });
-
-    // --- Real-time listener for settings.coverUrl ---
-    const settingsDoc = doc(db, 'meta', 'settings');
-    onSnapshot(settingsDoc, snap => {
-      const data = snap.exists() ? snap.data() : {};
-      setLandingCover(data.coverUrl || '');
-    });
-
-    // --- Basic album & photo realtime rendering (keeps public site in sync) ---
-    // If your existing app.js already does album/photo rendering, this will be harmless.
-    const albumsCol = collection(db, 'albums');
-    const photosCol = collection(db, 'photos');
-
-    // listen albums (show thumbnails if present)
-    onSnapshotCol(query(albumsCol, orderBy('createdAt', 'desc')), snap => {
-      albumsGrid.innerHTML = '';
-      snap.forEach(d => {
-        const a = d.data();
-        const card = document.createElement('div');
-        card.className = 'album-card';
-        const cover = (a.coverUrl || '/placeholder.svg') + '?v=' + Date.now();
-        card.innerHTML = `
-          <img class="album-card-bg" src="${cover}" alt="${a.name}" />
-          <div class="album-card-overlay">
-            <div class="album-card-title">${a.name}</div>
-            <div class="album-card-count">${a.count || 0} fotos</div>
-          </div>
-        `;
-        card.onclick = () => openAlbum(d.id, a.name);
-        albumsGrid.appendChild(card);
-      });
-      if (snap.size === 0) albumsGrid.innerHTML = '<div class="loading">No hay momentos todavía.</div>';
-    });
-
-    // open album -> render photos
-    function openAlbum(albumId, name) {
-      galleryTitle.textContent = name;
-      galleryGrid.innerHTML = '<div class="loading">Cargando fotos...</div>';
-      gallerySection.classList.remove('hidden');
-
-      const q = query(photosCol, orderBy('createdAt', 'desc'));
-      // simple filter client-side for albumId
-      const unsub = onSnapshotCol(q, snap => {
-        galleryGrid.innerHTML = '';
-        const photos = [];
-        snap.forEach(d => { const p = d.data(); p.id = d.id; if (p.albumId === albumId) photos.push(p); });
-        if (photos.length === 0) galleryGrid.innerHTML = '<div class="loading">No hay fotos en este momento.</div>';
-        photos.forEach(p => {
-          const it = document.createElement('div'); it.className = 'gallery-item';
-          const img = document.createElement('img'); img.className = 'gallery-item-img';
-          img.src = p.url + '?v=' + Date.now();
-          img.alt = p.filename || '';
-          it.appendChild(img);
-          it.onclick = () => openLightbox(p.url);
-          galleryGrid.appendChild(it);
-        });
-      });
-
-      // when user goes back, unsubscribe to avoid memory leaks
-      backBtn.onclick = () => { unsub(); gallerySection.classList.add('hidden'); };
-    }
-
-    // Lightbox: open full image
-    const lightbox = document.getElementById('lightbox');
-    const lbImg = lightbox.querySelector('.lightbox-img');
-    function openLightbox(url) {
-      lbImg.src = url + '?v=' + Date.now();
-      lightbox.classList.remove('hidden');
-    }
-    lightbox.querySelector('.lightbox-close').onclick = () => lightbox.classList.add('hidden');
-    lightbox.querySelector('.lightbox-download').onclick = () => {
-      const url = lbImg.src;
-      const a = document.createElement('a'); a.href = url; a.download = ''; document.body.appendChild(a); a.click(); a.remove();
-    };
-
-    // initial UI: make sure landing has placeholder until settings arrive
-    setLandingCover('');
-
-    // Optional: if you have app.js logic, keep loading it AFTER this script to avoid race conditions.
-    // (Your existing app.js is already included below, so nothing else needed.)
-
-  </script>
-
-  <!-- your existing app.js (keeps other logic intact) -->
+  <!-- Main JavaScript App -->
   <script type="module" src="app.js"></script>
 </body>
 </html>

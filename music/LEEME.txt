@@ -1,0 +1,4 @@
+# Carpeta de Música de la Boda
+
+Coloca aquí tu canción de boda en formato MP3 (por ejemplo `cancion.mp3`).
+Desde el panel de administración (admin.html) puedes subir tu canción directamente.

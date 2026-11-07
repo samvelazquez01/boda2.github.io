@@ -1,0 +1,17 @@
+# Carpeta de Fotos de GitHub
+
+Aquí se guardan las fotos para que se carguen directamente desde GitHub Pages (`boda2.github.io`).
+
+## Estructura:
+```
+photos/
+  portada.webp
+  ceremonia_01.webp
+  recepcion_01.webp
+  originals/
+    orig_ceremonia_01.jpg
+    orig_recepcion_01.jpg
+```
+
+- **`photos/`**: Fotos optimizadas en WebP para que la galería cargue a toda velocidad en teléfonos móviles y ordenadores.
+- **`photos/originals/`**: Fotos en resolución 100% original que se descargan cuando los invitados hacen clic en el botón **"⬇ Descargar Original"**.

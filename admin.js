@@ -1,401 +1,646 @@
-// ===============================
-//  ADMIN.JS FINAL CORREGIDO
-// ===============================
+// ========================================================
+//  ADMIN.JS - GESTOR DE PORTADA Y FOTOS EN ALTA CALIDAD
+// ========================================================
 
-// Firebase imports (modular)
-import {
-  collection,
-  doc,
-  addDoc,
-  deleteDoc,
-  getDoc,
-  getDocs,
-  updateDoc,
-  setDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+// Current data state
+let currentData = {
+  settings: {
+    coupleNames: "Samuel & Lisbeth",
+    subtitle: "Un amor para toda la vida",
+    date: "20 • Noviembre • 2024",
+    welcomeMessage: "Gracias por acompañarnos y celebrar el día más feliz de nuestras vidas.",
+    coverUrl: "placeholder.svg"
+  },
+  albums: [
+    {
+      id: "sesion-previa",
+      name: "Sesión Previa",
+      description: "Momentos íntimos antes del gran día",
+      coverUrl: "placeholder.svg",
+      photos: []
+    },
+    {
+      id: "la-ceremonia",
+      name: "La Ceremonia",
+      description: "El 'Sí, acepto' ante Dios y nuestros seres queridos",
+      coverUrl: "placeholder.svg",
+      photos: []
+    },
+    {
+      id: "la-recepcion",
+      name: "La Recepción & Fiesta",
+      description: "Celebrando la alegría de comenzar este nuevo viaje",
+      coverUrl: "placeholder.svg",
+      photos: []
+    }
+  ]
+};
 
-// Bytescale config
-const BYTESCALE_API_KEY = "public_W23MTTM2dP5F5CY6XxYF4PbqaZDg";
-const BYTESCALE_WIDGET_URL = "https://js.bytescale.com/upload-widget/v4";
+// Queue of compressed files
+let compressedQueue = [];
+let totalOriginalBytes = 0;
+let totalCompressedBytes = 0;
 
-// Firebase DB
-const db = window.db;
-if (!db) alert("Firebase no está inicializado correctamente.");
+// Cover Photo state
+let selectedCoverBlob = null;
+let selectedCoverFile = null;
 
-// UI elements
-const albumNameInput = document.getElementById("album-name-input");
+// Music state
+let selectedMusicBlob = null;
+let selectedMusicFile = null;
+
+// DOM Elements - Cover
+const coverPreviewImg = document.getElementById("cover-preview-img");
+const coverPreviewTitle = document.getElementById("cover-preview-title");
+const coverFileInput = document.getElementById("cover-file-input");
+const chooseCoverBtn = document.getElementById("choose-cover-btn");
+const coverCurrentStatus = document.getElementById("cover-current-status");
+const coverDownloadActions = document.getElementById("cover-download-actions");
+const downloadCoverBtn = document.getElementById("download-cover-btn");
+
+// DOM Elements - Music
+const adminAudioPreview = document.getElementById("admin-audio-preview");
+const adminMusicStatus = document.getElementById("admin-music-status");
+const musicFileInput = document.getElementById("music-file-input");
+const chooseMusicBtn = document.getElementById("choose-music-btn");
+const musicUrlInput = document.getElementById("music-url-input");
+const musicDownloadActions = document.getElementById("music-download-actions");
+const downloadMusicBtn = document.getElementById("download-music-btn");
+
+// DOM Elements - Compressor
+const targetAlbumSelect = document.getElementById("target-album-select");
+const maxDimensionSelect = document.getElementById("max-dimension-select");
+const qualitySelect = document.getElementById("quality-select");
+const formatSelect = document.getElementById("format-select");
+const includeOriginalsCheckbox = document.getElementById("include-originals-checkbox");
+
+const dropzone = document.getElementById("dropzone");
+const photosFileInput = document.getElementById("photos-file-input");
+
+const statsContainer = document.getElementById("compression-stats-container");
+const statCount = document.getElementById("stat-count");
+const statOriginalSize = document.getElementById("stat-original-size");
+const statCompressedSize = document.getElementById("stat-compressed-size");
+const statSavings = document.getElementById("stat-savings");
+
+const downloadActionsContainer = document.getElementById("download-actions-container");
+const downloadZipBtn = document.getElementById("download-zip-btn");
+const downloadJsonBtn = document.getElementById("download-json-btn");
+const clearQueueBtn = document.getElementById("clear-queue-btn");
+const compressedGrid = document.getElementById("compressed-grid");
+
+const momentsList = document.getElementById("moments-list");
+const newAlbumName = document.getElementById("new-album-name");
+const newAlbumDesc = document.getElementById("new-album-desc");
 const createAlbumBtn = document.getElementById("create-album-btn");
-const albumsList = document.getElementById("albums-list");
-const albumSelect = document.getElementById("album-select");
-const filterAlbumSelect = document.getElementById("filter-album-select");
-const photosList = document.getElementById("photos-list");
-const uploadArea = document.getElementById("upload-area");
-const coverPreview = document.getElementById("cover-preview");
-const deleteCoverBtn = document.getElementById("delete-cover-btn");
-const uploadProgress = document.getElementById("upload-progress");
-const progressFill = document.querySelector(".progress-fill");
-const progressText = document.querySelector(".progress-text");
 
+const settingsNames = document.getElementById("settings-names");
+const settingsSubtitle = document.getElementById("settings-subtitle");
+const settingsDate = document.getElementById("settings-date");
+const saveSettingsBtn = document.getElementById("save-settings-btn");
 
-// =======================================================
-//   UTILIDADES
-// =======================================================
-
-function showProgress(percent, text) {
-  uploadProgress.classList.remove("hidden");
-  progressFill.style.width = percent + "%";
-  progressText.textContent = text || percent + "%";
-
-  if (percent >= 100) {
-    setTimeout(() => uploadProgress.classList.add("hidden"), 600);
+// ========================================================
+// 1. CARGA INICIAL DE ALBUMS.JSON
+// ========================================================
+async function initData() {
+  try {
+    const res = await fetch("data/albums.json?v=" + Date.now());
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.albums) {
+        currentData = data;
+      }
+    }
+  } catch (err) {
+    console.warn("Usando datos locales por defecto", err);
   }
+
+  // Populate UI
+  refreshMomentsUI();
+  populateSettingsUI();
+  initCoverUI();
+  initMusicUI();
 }
 
-function clearElement(el) {
-  while (el.firstChild) el.removeChild(el.firstChild);
-}
+function initMusicUI() {
+  if (currentData.settings) {
+    if (currentData.settings.musicUrl) {
+      adminAudioPreview.src = currentData.settings.musicUrl;
+      adminMusicStatus.textContent = currentData.settings.musicUrl;
+      musicUrlInput.value = currentData.settings.musicUrl;
+    }
+  }
 
-function logError(tag, err) {
-  console.error(`[${tag}]`, err);
-  alert(err.message || "Error desconocido");
-}
+  // Event listener para seleccionar canción
+  chooseMusicBtn.addEventListener("click", () => musicFileInput.click());
 
+  musicFileInput.addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
 
-// =======================================================
-//   BYTESCALE WIDGET
-// =======================================================
+    selectedMusicFile = file;
+    selectedMusicBlob = file;
 
-function loadBytescaleWidget() {
-  return new Promise((resolve, reject) => {
-    if (window.Bytescale && window.Bytescale.UploadWidget) {
-      return resolve();
+    const audioUrl = URL.createObjectURL(file);
+    adminAudioPreview.src = audioUrl;
+    currentData.settings.musicUrl = "music/cancion.mp3";
+    musicUrlInput.value = "music/cancion.mp3";
+    adminMusicStatus.textContent = "music/cancion.mp3 (Nueva seleccionada)";
+    musicDownloadActions.classList.remove("hidden");
+    showNotification("¡Canción de boda seleccionada! Lista para guardar.");
+  });
+
+  // Cambiar URL de música manualmente si se escribe
+  musicUrlInput.addEventListener("input", (e) => {
+    const val = e.target.value.trim();
+    if (val) {
+      currentData.settings.musicUrl = val;
+      adminAudioPreview.src = val;
+      adminMusicStatus.textContent = val;
+    }
+  });
+
+  // Descargar archivo de canción por separado
+  downloadMusicBtn.addEventListener("click", () => {
+    if (!selectedMusicBlob) {
+      alert("Por favor selecciona un archivo de música primero.");
+      return;
     }
 
-    const script = document.createElement("script");
-    script.src = BYTESCALE_WIDGET_URL;
-    script.onload = () => {
-      if (window.Bytescale && window.Bytescale.UploadWidget) resolve();
-      else reject("Bytescale no cargó correctamente.");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(selectedMusicBlob);
+    a.download = "cancion.mp3";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    downloadJsonBtn.click();
+    showNotification("Descargada cancion.mp3 y actualizado data/albums.json");
+  });
+}
+
+function initCoverUI() {
+  if (currentData.settings) {
+    if (currentData.settings.coverUrl) {
+      coverPreviewImg.src = currentData.settings.coverUrl;
+      coverCurrentStatus.textContent = currentData.settings.coverUrl;
+    }
+    if (currentData.settings.coupleNames) {
+      coverPreviewTitle.textContent = currentData.settings.coupleNames;
+    }
+  }
+
+  // Event listener para cambiar portada
+  chooseCoverBtn.addEventListener("click", () => coverFileInput.click());
+
+  coverFileInput.addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    selectedCoverFile = file;
+    selectedCoverBlob = file;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      coverPreviewImg.src = ev.target.result;
+      currentData.settings.coverUrl = "photos/portada.jpg";
+      coverCurrentStatus.textContent = "photos/portada.jpg (Nueva seleccionada)";
+      coverDownloadActions.classList.remove("hidden");
+      showNotification("¡Foto de portada seleccionada! Lista para guardar.");
     };
-    script.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
-    document.head.appendChild(script);
+  // Descargar foto de portada por separado
+  downloadCoverBtn.addEventListener("click", () => {
+    if (!selectedCoverBlob) {
+      alert("Por favor selecciona una foto de portada primero.");
+      return;
+    }
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(selectedCoverBlob);
+    a.download = "portada.jpg";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    // Guardar también albums.json actualizado
+    downloadJsonBtn.click();
+    showNotification("Descargada portada.jpg y actualizado data/albums.json");
   });
 }
 
-async function openBytescaleUpload({ multi = false } = {}) {
-  await loadBytescaleWidget();
-
-  return await window.Bytescale.UploadWidget.open({
-    apiKey: BYTESCALE_API_KEY,
-    multi,
-    maxFileSizeBytes: 500 * 1024 * 1024, // 500MB
-    mimeTypes: [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "image/x-sony-arw",      // RAW Sony
-      "application/octet-stream" // RAW genérico
-    ]
+function refreshMomentsUI() {
+  targetAlbumSelect.innerHTML = "";
+  currentData.albums.forEach(album => {
+    const opt = document.createElement("option");
+    opt.value = album.id;
+    opt.textContent = album.name;
+    targetAlbumSelect.appendChild(opt);
   });
-}
 
-
-// =======================================================
-//   PORTADA
-// =======================================================
-
-const settingsDoc = doc(db, "meta", "settings");
-
-async function loadCover() {
-  const snap = await getDoc(settingsDoc);
-  const data = snap.exists() ? snap.data() : {};
-
-  renderCover(data.coverUrl || "");
-}
-
-function renderCover(url) {
-  clearElement(coverPreview);
-
-  if (!url) {
-    const span = document.createElement("span");
-    span.textContent = "Sin portada";
-    span.className = "cover-placeholder";
-    coverPreview.appendChild(span);
-    deleteCoverBtn.classList.add("hidden");
+  momentsList.innerHTML = "";
+  if (currentData.albums.length === 0) {
+    momentsList.innerHTML = '<div class="loading">No hay momentos creados todavía.</div>';
     return;
   }
 
-  const img = document.createElement("img");
-  img.src = url + "?v=" + Date.now();
-  coverPreview.appendChild(img);
-
-  deleteCoverBtn.classList.remove("hidden");
-}
-
-// Subir portada
-document
-  .querySelector("label[for='cover-input']")
-  .addEventListener("click", async (e) => {
-    e.preventDefault();
-
-    try {
-      const files = await openBytescaleUpload({ multi: false });
-      if (!files.length) return;
-
-      const f = files[0];
-
-      const url = f.fileUrl;
-
-      await setDoc(
-        settingsDoc,
-        { coverUrl: url },
-        { merge: true }
-      );
-
-      renderCover(url);
-
-      alert("Portada actualizada.");
-    } catch (err) {
-      logError("SUBIR PORTADA", err);
-    }
-  });
-
-// Borrar portada
-deleteCoverBtn.onclick = async () => {
-  if (!confirm("¿Eliminar portada?")) return;
-
-  try {
-    await updateDoc(settingsDoc, { coverUrl: "" });
-    renderCover("");
-  } catch (err) {
-    logError("BORRAR PORTADA", err);
-  }
-};
-
-
-// =======================================================
-//   CREAR ÁLBUM
-// =======================================================
-
-createAlbumBtn.addEventListener("click", async () => {
-  const name = albumNameInput.value.trim();
-  if (!name) return alert("Escribe un nombre para el momento.");
-
-  try {
-    await addDoc(collection(db, "albums"), {
-      name,
-      createdAt: serverTimestamp(),
-      count: 0
-    });
-
-    albumNameInput.value = "";
-  } catch (err) {
-    logError("CREAR ALBUM", err);
-  }
-});
-
-
-// =======================================================
-//   SUBIR FOTOS
-// =======================================================
-
-uploadArea.addEventListener("click", async () => {
-  const albumId = albumSelect.value;
-  if (!albumId) return alert("Selecciona un momento primero.");
-
-  try {
-    const files = await openBytescaleUpload({ multi: true });
-    if (!files.length) return;
-
-    let i = 0;
-
-    for (const f of files) {
-      i++;
-
-      const finalName =
-        f.originalFileName ||
-        f.fileName ||
-        f.fileUrl.split("/").pop() ||
-        "archivo";
-
-      await addDoc(collection(db, "photos"), {
-        albumId,
-        url: f.fileUrl,
-        filename: finalName,
-        createdAt: serverTimestamp()
-      });
-
-      showProgress(10 + (i / files.length) * 80, `Subiendo ${i}/${files.length}`);
-    }
-
-    showProgress(100, "Completado");
-    alert("Fotos subidas correctamente.");
-  } catch (err) {
-    logError("SUBIR FOTOS", err);
-  }
-});
-
-
-// =======================================================
-//   ELIMINAR FOTO
-// =======================================================
-
-async function deletePhoto(photoId) {
-  if (!confirm("¿Eliminar esta foto? No se borra de Bytescale.")) return;
-
-  try {
-    await deleteDoc(doc(db, "photos", photoId));
-  } catch (err) {
-    logError("BORRAR FOTO", err);
-  }
-}
-
-
-// =======================================================
-//   REALTIME ALBUMS + PHOTOS
-// =======================================================
-
-function renderAlbums(albums) {
-  clearElement(albumsList);
-  clearElement(albumSelect);
-  clearElement(filterAlbumSelect);
-
-  const opt1 = document.createElement("option");
-  opt1.value = "";
-  opt1.textContent = "Selecciona un momento";
-  albumSelect.appendChild(opt1);
-
-  const opt2 = document.createElement("option");
-  opt2.value = "";
-  opt2.textContent = "Todos los momentos";
-  filterAlbumSelect.appendChild(opt2);
-
-  albums.forEach((a) => {
-    // admin list
+  currentData.albums.forEach((album, index) => {
+    const count = (album.photos && album.photos.length) || 0;
     const item = document.createElement("div");
     item.className = "album-item";
-
     item.innerHTML = `
-      <div class="album-item-name">${a.name}</div>
-      <div class="album-item-right">
-        <span class="album-item-count">${a.count || 0} fotos</span>
-        <button class="create-btn" data-id="${a.id}">Abrir</button>
+      <div>
+        <span class="album-item-name">${album.name}</span>
+        <span class="album-item-count">(${count} fotos)</span>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">${album.description || ''}</p>
+      </div>
+      <div>
+        <button class="btn-danger" style="padding: 0.4rem 0.9rem; font-size: 0.8rem;" data-index="${index}">
+          Eliminar
+        </button>
       </div>
     `;
 
-    item.querySelector("button").onclick = () => {
-      filterAlbumSelect.value = a.id;
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    item.querySelector(".btn-danger").onclick = () => {
+      if (confirm(`¿Eliminar el momento "${album.name}"?`)) {
+        currentData.albums.splice(index, 1);
+        refreshMomentsUI();
+        showNotification(`Momento "${album.name}" eliminado.`);
+      }
     };
 
-    albumsList.appendChild(item);
-
-    // selects
-    const o1 = document.createElement("option");
-    o1.value = a.id;
-    o1.textContent = a.name;
-    albumSelect.appendChild(o1);
-
-    const o2 = document.createElement("option");
-    o2.value = a.id;
-    o2.textContent = a.name;
-    filterAlbumSelect.appendChild(o2);
+    momentsList.appendChild(item);
   });
 }
 
-function renderPhotos(photos) {
-  clearElement(photosList);
+function populateSettingsUI() {
+  if (currentData.settings) {
+    if (currentData.settings.coupleNames) settingsNames.value = currentData.settings.coupleNames;
+    if (currentData.settings.subtitle) settingsSubtitle.value = currentData.settings.subtitle;
+    if (currentData.settings.date) settingsDate.value = currentData.settings.date;
+  }
+}
 
-  if (!photos.length) {
-    const d = document.createElement("div");
-    d.className = "loading";
-    d.textContent = "No hay fotos.";
-    photosList.appendChild(d);
+// ========================================================
+// 2. OPTIMIZACIÓN Y PROCESAMIENTO EN ALTA RESOLUCIÓN
+// ========================================================
+function formatBytes(bytes) {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
+
+async function processImageFile(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDimVal = maxDimensionSelect.value;
+        let width = img.width;
+        let height = img.height;
+
+        // Si no es "original", escalar a la resolución deseada manteniendo proporción
+        if (maxDimVal !== "original") {
+          const maxDim = parseInt(maxDimVal, 10) || 2560;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+        }
+
+        // Dibujar en canvas con máxima nitidez
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Exportar a WebP o JPEG
+        const format = formatSelect.value || "image/webp";
+        const quality = parseFloat(qualitySelect.value) || 0.92;
+        const extension = format === "image/webp" ? "webp" : "jpg";
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) return resolve(null);
+
+            const cleanBase = file.name
+              .replace(/\.[^/.]+$/, "")
+              .toLowerCase()
+              .replace(/[^a-z0-9_-]/g, "_");
+            const newFilename = `${cleanBase}_hd.${extension}`;
+            const previewUrl = URL.createObjectURL(blob);
+
+            const result = {
+              originalFile: file,
+              originalName: file.name,
+              newName: newFilename,
+              originalSize: file.size,
+              compressedSize: blob.size,
+              blob: blob,
+              previewUrl: previewUrl,
+              albumId: targetAlbumSelect.value,
+              width: width,
+              height: height
+            };
+
+            resolve(result);
+          },
+          format,
+          quality
+        );
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleFiles(files) {
+  if (!files || files.length === 0) return;
+
+  const validFiles = Array.from(files).filter(f => f.type.startsWith("image/"));
+  if (validFiles.length === 0) {
+    alert("Por favor selecciona solo archivos de imagen (JPG, PNG, WebP).");
     return;
   }
 
-  photos.forEach((p) => {
-    const wrap = document.createElement("div");
-    wrap.className = "photo-item";
+  showNotification(`Procesando ${validFiles.length} fotos en alta calidad...`);
 
-    if (p.filename.match(/\.(arw|ARW)$/)) {
-      wrap.innerHTML = `
-        <a href="${p.url}" target="_blank" class="raw-download">
-          Archivo RAW – Descargar
-        </a>
-      `;
-    } else {
-      const img = document.createElement("img");
-      img.src = p.url + "?v=" + Date.now();
-      wrap.appendChild(img);
+  statsContainer.classList.remove("hidden");
+  downloadActionsContainer.classList.remove("hidden");
+
+  for (let file of validFiles) {
+    const processed = await processImageFile(file);
+    if (processed) {
+      compressedQueue.push(processed);
+      totalOriginalBytes += processed.originalSize;
+      totalCompressedBytes += processed.compressedSize;
+      addCardToGrid(processed);
+      updateStats();
     }
+  }
 
-    const del = document.createElement("button");
-    del.className = "photo-delete-btn";
-    del.textContent = "Eliminar";
-    del.onclick = () => deletePhoto(p.id);
-
-    wrap.appendChild(del);
-    photosList.appendChild(wrap);
-  });
+  showNotification(`¡${validFiles.length} fotos optimizadas con éxito!`);
 }
 
-// Listen albums
-onSnapshot(
-  query(collection(db, "albums"), orderBy("createdAt", "desc")),
-  (snap) => {
-    const albums = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    renderAlbums(albums);
+function updateStats() {
+  statCount.textContent = compressedQueue.length;
+  statOriginalSize.textContent = formatBytes(totalOriginalBytes);
+  statCompressedSize.textContent = formatBytes(totalCompressedBytes);
+
+  if (totalOriginalBytes > 0) {
+    const savedPct = Math.round(((totalOriginalBytes - totalCompressedBytes) / totalOriginalBytes) * 100);
+    statSavings.textContent = `${savedPct}% menos`;
   }
-);
-
-// Listen photos + auto-filter
-onSnapshot(
-  query(collection(db, "photos"), orderBy("createdAt", "desc")),
-  (snap) => {
-    const photos = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-    const filterId = filterAlbumSelect.value;
-    const filtered = filterId ? photos.filter((p) => p.albumId === filterId) : photos;
-
-    renderPhotos(filtered);
-    updateCounts(photos);
-  }
-);
-
-
-// =======================================================
-//   ACTUALIZAR CONTADOR DEL ÁLBUM
-// =======================================================
-
-async function updateCounts(allPhotos) {
-  const counts = {};
-
-  allPhotos.forEach((p) => {
-    counts[p.albumId] = (counts[p.albumId] || 0) + 1;
-  });
-
-  const albumDocs = await getDocs(collection(db, "albums"));
-
-  albumDocs.forEach((aDoc) => {
-    const id = aDoc.id;
-    const newCount = counts[id] || 0;
-
-    if (aDoc.data().count !== newCount) {
-      updateDoc(doc(db, "albums", id), { count: newCount });
-    }
-  });
 }
 
+function addCardToGrid(item) {
+  const card = document.createElement("div");
+  card.className = "compressed-card";
+  const savedPct = Math.round(((item.originalSize - item.compressedSize) / item.originalSize) * 100);
 
-// =======================================================
-//   INIT
-// =======================================================
+  card.innerHTML = `
+    <img src="${item.previewUrl}" alt="${item.newName}" />
+    <div class="compressed-card-body">
+      <div class="compressed-name" title="${item.newName}">${item.newName}</div>
+      <div style="color: var(--text-muted); font-size: 0.75rem;">
+        ${formatBytes(item.originalSize)} → <strong>${formatBytes(item.compressedSize)}</strong>
+      </div>
+      <div class="compressed-savings">-${savedPct}% de peso (${item.width}x${item.height})</div>
+    </div>
+  `;
 
-loadCover();
-console.log("[ADMIN] Listo.");
+  compressedGrid.appendChild(card);
+}
+
+// Limpiar cola
+clearQueueBtn.addEventListener("click", () => {
+  compressedQueue.forEach(item => URL.revokeObjectURL(item.previewUrl));
+  compressedQueue = [];
+  totalOriginalBytes = 0;
+  totalCompressedBytes = 0;
+  compressedGrid.innerHTML = "";
+  statsContainer.classList.add("hidden");
+  downloadActionsContainer.classList.add("hidden");
+  showNotification("Lista limpiada.");
+});
+
+// Dropzone Events
+dropzone.addEventListener("click", () => photosFileInput.click());
+photosFileInput.addEventListener("change", (e) => handleFiles(e.target.files));
+
+["dragenter", "dragover"].forEach(evt => {
+  dropzone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropzone.classList.add("dragover");
+  });
+});
+
+["dragleave", "drop"].forEach(evt => {
+  dropzone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropzone.classList.remove("dragover");
+  });
+});
+
+dropzone.addEventListener("drop", (e) => {
+  if (e.dataTransfer && e.dataTransfer.files) {
+    handleFiles(e.dataTransfer.files);
+  }
+});
+
+// ========================================================
+// 3. GENERAR ZIP COMPLETO (PORTADA + FOTOS + DATA/ALBUMS.JSON)
+// ========================================================
+downloadZipBtn.addEventListener("click", async () => {
+  if (compressedQueue.length === 0 && !selectedCoverBlob) {
+    alert("No hay fotos procesadas ni foto de portada para empaquetar.");
+    return;
+  }
+
+  if (typeof JSZip === "undefined") {
+    alert("La librería JSZip no se ha cargado. Revisa tu conexión a internet.");
+    return;
+  }
+
+  showNotification("Empaquetando portada, fotos y datos en ZIP...");
+  downloadZipBtn.disabled = true;
+  downloadZipBtn.textContent = "⏳ Generando archivo ZIP...";
+
+  const zip = new JSZip();
+  const photosFolder = zip.folder("photos");
+  const saveOriginals = includeOriginalsCheckbox && includeOriginalsCheckbox.checked;
+  const originalsFolder = saveOriginals ? zip.folder("photos/originals") : null;
+
+  const updatedData = JSON.parse(JSON.stringify(currentData));
+
+  // 1. Agregar foto de portada si se seleccionó
+  if (selectedCoverBlob) {
+    photosFolder.file("portada.jpg", selectedCoverBlob);
+    updatedData.settings.coverUrl = "photos/portada.jpg";
+    if (originalsFolder) {
+      originalsFolder.file("portada_original.jpg", selectedCoverFile || selectedCoverBlob);
+    }
+  }
+
+  // 1.1 Agregar archivo de música si se seleccionó
+  if (selectedMusicBlob) {
+    const musicFolder = zip.folder("music");
+    musicFolder.file("cancion.mp3", selectedMusicBlob);
+    updatedData.settings.musicUrl = "music/cancion.mp3";
+  }
+
+  // 2. Agregar fotos de la cola
+  compressedQueue.forEach((item, index) => {
+    const filename = `foto_${Date.now()}_${index}_${item.newName}`;
+    photosFolder.file(filename, item.blob);
+
+    let originalRelativePath = `photos/${filename}`;
+    if (saveOriginals && item.originalFile) {
+      const origName = `orig_${Date.now()}_${index}_${item.originalName.replace(/\s+/g, '_')}`;
+      originalsFolder.file(origName, item.originalFile);
+      originalRelativePath = `photos/originals/${origName}`;
+    }
+
+    let targetAlbum = updatedData.albums.find(a => a.id === item.albumId);
+    if (!targetAlbum) {
+      targetAlbum = updatedData.albums[0];
+    }
+
+    if (targetAlbum) {
+      if (!targetAlbum.photos) targetAlbum.photos = [];
+      const relativePath = `photos/${filename}`;
+      targetAlbum.photos.push({
+        id: `photo_${Date.now()}_${index}`,
+        url: relativePath,
+        originalUrl: originalRelativePath,
+        title: item.originalName.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "),
+        caption: ""
+      });
+
+      if (!targetAlbum.coverUrl || targetAlbum.coverUrl === "placeholder.svg") {
+        targetAlbum.coverUrl = relativePath;
+      }
+    }
+  });
+
+  // 3. Agregar data/albums.json
+  const dataFolder = zip.folder("data");
+  dataFolder.file("albums.json", JSON.stringify(updatedData, null, 2));
+
+  // 4. Instrucciones dentro del ZIP
+  zip.file(
+    "INSTRUCCIONES_GITHUB.txt",
+    `PASOS PARA SUBIR TUS FOTOS A GITHUB:\n\n` +
+    `1. Descomprime este archivo ZIP en tu computadora.\n` +
+    `2. Copia todo el contenido de la carpeta 'photos' dentro de la carpeta 'photos/' de tu repositorio 'boda2.github.io'.\n` +
+    `   (Incluyendo la foto 'portada.jpg' y la carpeta 'originals').\n` +
+    `3. Copia el archivo 'data/albums.json' dentro de la carpeta 'data/' de tu repositorio.\n` +
+    `4. Sube los cambios a GitHub (arrastrándolos a GitHub.com o con 'git push').\n\n` +
+    `¡Tus invitados verán la portada de bienvenida y las fotos en alta calidad inmediatamente!`
+  );
+
+  const content = await zip.generateAsync({ type: "blob" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(content);
+  a.download = `boda-fotos-optimizadas-github.zip`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  currentData = updatedData;
+  refreshMomentsUI();
+
+  downloadZipBtn.disabled = false;
+  downloadZipBtn.innerHTML = "<span>📦 Descargar Fotos Comprimidas + albums.json (ZIP)</span>";
+  showNotification("¡Archivo ZIP descargado con éxito! 🎉");
+});
+
+// Descargar solo albums.json
+downloadJsonBtn.addEventListener("click", () => {
+  const jsonStr = JSON.stringify(currentData, null, 2);
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "albums.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  showNotification("Descargado albums.json");
+});
+
+// ========================================================
+// 4. CREAR MOMENTOS / ÁLBUMES
+// ========================================================
+createAlbumBtn.addEventListener("click", () => {
+  const name = newAlbumName.value.trim();
+  const desc = newAlbumDesc.value.trim();
+
+  if (!name) {
+    alert("Por favor ingresa un nombre para el momento.");
+    return;
+  }
+
+  const id = name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "-")
+    .replace(/-+/g, "-");
+
+  currentData.albums.push({
+    id: id,
+    name: name,
+    description: desc,
+    coverUrl: "placeholder.svg",
+    photos: []
+  });
+
+  newAlbumName.value = "";
+  newAlbumDesc.value = "";
+  refreshMomentsUI();
+  showNotification(`¡Momento "${name}" creado exitosamente!`);
+});
+
+// ========================================================
+// 5. GUARDAR CONFIGURACIONES DE LA BODA
+// ========================================================
+saveSettingsBtn.addEventListener("click", () => {
+  currentData.settings.coupleNames = settingsNames.value.trim() || "Samuel & Lisbeth";
+  currentData.settings.subtitle = settingsSubtitle.value.trim() || "Un amor para toda la vida";
+  currentData.settings.date = settingsDate.value.trim() || "20 • Noviembre • 2024";
+
+  downloadJsonBtn.click();
+  showNotification("Información guardada. Recuerda reemplazar data/albums.json en tu proyecto.");
+});
+
+// ========================================================
+// 6. TOAST NOTIFICATION
+// ========================================================
+function showNotification(msg) {
+  const existing = document.querySelector(".toast");
+  if (existing) existing.remove();
+
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.innerHTML = `<span>✨</span> <span>${msg}</span>`;
+  document.body.appendChild(toast);
+
+  setTimeout(() => toast.remove(), 3500);
+}
+
+// Inicialización
+window.addEventListener("DOMContentLoaded", initData);
