@@ -232,6 +232,30 @@ function initAudio() {
 // 3. SINCRONIZACIÓN EN TIEMPO REAL CON FIREBASE
 // ========================================================
 function initRealtimeData() {
+  // Carga instantánea desde localStorage (0ms de espera)
+  const localCover = localStorage.getItem("boda_cover_url");
+  if (localCover) setLandingCover(localCover);
+
+  const localNames = localStorage.getItem("boda_names");
+  if (localNames) {
+    heroTitle.textContent = localNames;
+    document.title = `Álbum de Boda • ${localNames}`;
+  }
+
+  const localPlaylist = localStorage.getItem("boda_playlist");
+  if (localPlaylist) {
+    try {
+      const parsed = JSON.parse(localPlaylist);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        albumSettings.playlist = parsed;
+        if (weddingAudio && !weddingAudio.src) {
+          weddingAudio.src = parsed[0].url;
+          musicLabel.textContent = parsed[0].title || "Canción";
+        }
+      }
+    } catch (_) {}
+  }
+
   // 1. Escuchar portada, nombres y playlist en tiempo real
   const settingsDoc = doc(db, "meta", "settings");
   onSnapshot(settingsDoc, (snap) => {

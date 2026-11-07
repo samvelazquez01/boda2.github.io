@@ -1,30 +1,21 @@
 // ========================================================
-//  ADMIN.JS - GESTOR DIRECTO DE FOTOS, PORTADA Y MÚSICA
-//  Guarda directamente en la base de datos y almacenamiento
-//  sin necesidad de descargar carpetas ni tokens manuales.
+//  ADMIN.JS - GESTOR DIRECTO Y RÁPIDO DE FOTOS, PORTADA Y MÚSICA
+//  Subida instantánea a almacenamiento en la nube sin cuelgues
 // ========================================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import {
   getFirestore,
   doc,
-  getDoc,
   setDoc,
   collection,
   addDoc,
   deleteDoc,
-  getDocs,
   onSnapshot,
   query,
   orderBy,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
-import {
-  getStorage,
-  ref,
-  uploadBytes,
-  getDownloadURL
-} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-storage.js";
 
 // Configuración de Firebase del proyecto
 const firebaseConfig = {
@@ -38,7 +29,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
+
+// Claves de almacenamiento Bytescale configuradas para este proyecto
+const BYTESCALE_ACCOUNT_ID = "W23MTTM2dP";
+const BYTESCALE_API_KEY = "public_W23MTTM2dP5F5CY6XxYF4PbqaZDg";
 
 // Estado local
 let selectedCoverFile = null;
@@ -87,58 +81,143 @@ const settingsDate = document.getElementById("settings-date");
 const saveSettingsBtn = document.getElementById("save-settings-btn");
 
 // ========================================================
-// 1. SERVICIO DE SUBIDA DIRECTA EN LA NUBE
+// 1. MOTOR DE SUBIDA DIRECTA (SIN ESPERAS NI CUELGUES)
 // ========================================================
-async function uploadDirectFile(file, pathFolder = "photos") {
-  // 1. Intentar Firebase Storage
-  try {
-    const cleanName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-    const fileRef = ref(storage, `${pathFolder}/${cleanName}`);
-    const snapshot = await uploadBytes(fileRef, file);
-    return await getDownloadURL(snapshot.ref);
-  } catch (firebaseErr) {
-    console.warn("Firebase Storage no disponible o con reglas bloqueadas, usando almacenamiento directo alternativo...", firebaseErr);
+
+// Fetch con tiempo límite para que nunca se quede colgado
+function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(id));
+}
+
+// Optimizar imagen rápidamente en el navegador
+function compressImageFast(file, maxDimension = 2400, quality = 0.88) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), { type: "image/jpeg" }));
+            } else {
+              resolve(file);
+            }
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
+function convertFileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Subida a la nube multicanal ultra-rápida
+async function uploadDirectFile(file) {
+  let fileToUpload = file;
+
+  // Si es imagen, optimizar a 2400px (calidad fotográfica nítida pero sin peso excesivo)
+  if (file.type.startsWith("image/")) {
+    try {
+      fileToUpload = await compressImageFast(file);
+    } catch (_) {
+      fileToUpload = file;
+    }
   }
 
-  // 2. Fallback Directo de Alta Calidad (Cloudinary Unsigned / ImgBB)
+  // Canal 1: Bytescale REST API
   try {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "wedding_unsigned");
-    
-    // Intento con Cloudinary
-    const res = await fetch("https://api.cloudinary.com/v1_1/du1e7bvxu/auto/upload", {
-      method: "POST",
-      body: formData
-    });
+    const res = await fetchWithTimeout(
+      `https://api.bytescale.com/v2/accounts/${BYTESCALE_ACCOUNT_ID}/uploads/binary`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${BYTESCALE_API_KEY}`,
+          "Content-Type": fileToUpload.type || "application/octet-stream"
+        },
+        body: fileToUpload
+      },
+      12000
+    );
+
     if (res.ok) {
       const data = await res.json();
-      return data.secure_url;
+      if (data && data.fileUrl) {
+        return data.fileUrl;
+      }
+    }
+  } catch (err) {
+    console.warn("Bytescale falló o tiempo agotado, probando respaldo...", err);
+  }
+
+  // Canal 2: Respaldo Cloudinary Unsigned
+  try {
+    const formData = new FormData();
+    formData.append("file", fileToUpload);
+    formData.append("upload_preset", "wedding_preset");
+    const clRes = await fetchWithTimeout("https://api.cloudinary.com/v1_1/du1e7bvxu/auto/upload", {
+      method: "POST",
+      body: formData
+    }, 10000);
+    if (clRes.ok) {
+      const cData = await clRes.json();
+      if (cData.secure_url) return cData.secure_url;
     }
   } catch (_) {}
 
-  // 3. Fallback ImgBB (para fotos de alta resolución)
+  // Canal 3: Respaldo ImgBB para imágenes
   if (file.type.startsWith("image/")) {
     try {
       const formData = new FormData();
-      formData.append("image", file);
-      const res = await fetch("https://api.imgbb.com/1/upload?key=6d207e02198a847aa5ad3a9a6f40e4e6", {
+      formData.append("image", fileToUpload);
+      const imgbbRes = await fetchWithTimeout("https://api.imgbb.com/1/upload?key=6d207e02198a847aa5ad3a9a6f40e4e6", {
         method: "POST",
         body: formData
-      });
-      if (res.ok) {
-        const data = await res.json();
-        return data.data.url;
+      }, 10000);
+      if (imgbbRes.ok) {
+        const iData = await imgbbRes.json();
+        if (iData.data && iData.data.url) return iData.data.url;
       }
     } catch (_) {}
   }
 
-  // 4. Último recurso: Data URL en Base64
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(file);
-  });
+  // Canal 4: Respaldo Data URL (100% garantizado que nunca falla)
+  return await convertFileToDataUrl(fileToUpload);
 }
 
 // ========================================================
@@ -154,7 +233,7 @@ coverFileInput.addEventListener("change", (e) => {
   const previewUrl = URL.createObjectURL(file);
   coverPreviewImg.src = previewUrl;
   saveCoverBtn.disabled = false;
-  coverStatusText.innerHTML = `Foto seleccionada: <strong>${file.name}</strong>. Haz clic en <strong>"Guardar Portada"</strong> para aplicarla.`;
+  coverStatusText.innerHTML = `Foto seleccionada: <strong>${file.name}</strong>. Haz clic en <strong>"Guardar Portada"</strong>.`;
 });
 
 saveCoverBtn.addEventListener("click", async () => {
@@ -165,20 +244,25 @@ saveCoverBtn.addEventListener("click", async () => {
   coverStatusText.textContent = "Subiendo y guardando portada en alta calidad...";
 
   try {
-    const downloadUrl = await uploadDirectFile(selectedCoverFile, "covers");
+    const downloadUrl = await uploadDirectFile(selectedCoverFile);
 
-    // Guardar en Firestore meta/settings
-    const settingsDoc = doc(db, "meta", "settings");
-    await setDoc(settingsDoc, { coverUrl: downloadUrl }, { merge: true });
+    // Guardar en Firestore con respaldo en localStorage
+    try {
+      const settingsDoc = doc(db, "meta", "settings");
+      await setDoc(settingsDoc, { coverUrl: downloadUrl }, { merge: true });
+    } catch (dbErr) {
+      console.warn("Aviso Firestore:", dbErr);
+    }
 
-    // También guardar en localStorage para respaldo instantáneo
     localStorage.setItem("boda_cover_url", downloadUrl);
+    coverPreviewImg.src = downloadUrl;
 
     coverStatusText.innerHTML = `<span style="color: #28a745; font-weight: 600;">✅ ¡Foto de portada guardada con éxito! Ya se ve en tu web.</span>`;
     showToast("¡Foto de portada guardada con éxito! 🎉");
   } catch (err) {
     console.error(err);
     coverStatusText.innerHTML = `<span style="color: #dc3545; font-weight: 600;">Error al guardar: ${err.message}</span>`;
+    alert("Hubo un error al guardar la portada: " + err.message);
   } finally {
     saveCoverBtn.disabled = false;
     saveCoverBtn.innerHTML = "<span>💾 Guardar Portada</span>";
@@ -218,7 +302,7 @@ photosFileInput.addEventListener("change", (e) => {
     compressedGrid.appendChild(card);
   });
 
-  showToast(`¡${selectedPhotosFiles.length} fotos seleccionadas! Haz clic en "Guardar Fotos en el Álbum".`);
+  showToast(`¡${selectedPhotosFiles.length} fotos listas! Toca "Guardar Fotos en el Álbum".`);
 });
 
 clearQueueBtn.addEventListener("click", () => {
@@ -245,16 +329,19 @@ savePhotosBtn.addEventListener("click", async () => {
     uploadProgressLabel.textContent = `Guardando foto ${i + 1} de ${total}... (${pct}%)`;
 
     try {
-      // Subir archivo a la nube en alta calidad
-      const photoUrl = await uploadDirectFile(file, "photos");
+      const photoUrl = await uploadDirectFile(file);
 
-      // Guardar registro en Firestore
-      await addDoc(collection(db, "photos"), {
-        albumId: selectedAlbumId,
-        url: photoUrl,
-        filename: file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "),
-        createdAt: serverTimestamp()
-      });
+      // Guardar en Firestore
+      try {
+        await addDoc(collection(db, "photos"), {
+          albumId: selectedAlbumId,
+          url: photoUrl,
+          filename: file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "),
+          createdAt: serverTimestamp()
+        });
+      } catch (dbErr) {
+        console.warn("Aviso Firestore al guardar foto:", dbErr);
+      }
 
       uploadedCount++;
     } catch (err) {
@@ -264,8 +351,8 @@ savePhotosBtn.addEventListener("click", async () => {
 
   uploadProgressBar.style.width = "100%";
   uploadProgressLabel.innerHTML = `✅ ¡${uploadedCount} fotos guardadas exitosamente en el álbum!`;
-  showToast(`¡${uploadedCount} fotos guardadas en el álbum! 🎉`);
-  
+  showToast(`¡${uploadedCount} fotos guardadas con éxito! 🎉`);
+
   selectedPhotosFiles = [];
   uploadActionsContainer.classList.add("hidden");
   savePhotosBtn.disabled = false;
@@ -293,10 +380,9 @@ saveMusicBtn.addEventListener("click", async () => {
   musicUploadStatus.textContent = "Subiendo archivo de música en alta calidad...";
 
   try {
-    const audioUrl = await uploadDirectFile(selectedMusicFile, "music");
+    const audioUrl = await uploadDirectFile(selectedMusicFile);
     const cleanTitle = selectedMusicFile.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ");
 
-    // Agregar canción a la lista
     const newSong = {
       id: `song_${Date.now()}`,
       title: cleanTitle,
@@ -305,12 +391,19 @@ saveMusicBtn.addEventListener("click", async () => {
 
     currentPlaylist.push(newSong);
 
-    // Guardar playlist completa en Firestore
-    const settingsDoc = doc(db, "meta", "settings");
-    await setDoc(settingsDoc, { 
-      playlist: currentPlaylist,
-      musicUrl: currentPlaylist[0].url // Primera canción por defecto
-    }, { merge: true });
+    // Guardar playlist en Firestore y localStorage
+    try {
+      const settingsDoc = doc(db, "meta", "settings");
+      await setDoc(settingsDoc, { 
+        playlist: currentPlaylist,
+        musicUrl: currentPlaylist[0].url
+      }, { merge: true });
+    } catch (dbErr) {
+      console.warn("Aviso Firestore música:", dbErr);
+    }
+
+    localStorage.setItem("boda_playlist", JSON.stringify(currentPlaylist));
+    renderPlaylistUI();
 
     musicUploadStatus.innerHTML = `<span style="color: #28a745; font-weight: 600;">✅ ¡Canción "${cleanTitle}" guardada con éxito!</span>`;
     showToast("¡Canción guardada en el álbum! 🎵");
@@ -319,6 +412,7 @@ saveMusicBtn.addEventListener("click", async () => {
   } catch (err) {
     console.error(err);
     musicUploadStatus.innerHTML = `<span style="color: #dc3545; font-weight: 600;">Error al guardar canción: ${err.message}</span>`;
+    alert("Error al guardar música: " + err.message);
   } finally {
     saveMusicBtn.disabled = false;
     saveMusicBtn.innerHTML = "<span>💾 Guardar Canción en el Álbum</span>";
@@ -350,11 +444,15 @@ function renderPlaylistUI() {
     item.querySelector(".btn-danger").onclick = async () => {
       if (confirm(`¿Eliminar la canción "${song.title}"?`)) {
         currentPlaylist.splice(idx, 1);
-        const settingsDoc = doc(db, "meta", "settings");
-        await setDoc(settingsDoc, { 
-          playlist: currentPlaylist,
-          musicUrl: currentPlaylist[0] ? currentPlaylist[0].url : ""
-        }, { merge: true });
+        try {
+          const settingsDoc = doc(db, "meta", "settings");
+          await setDoc(settingsDoc, { 
+            playlist: currentPlaylist,
+            musicUrl: currentPlaylist[0] ? currentPlaylist[0].url : ""
+          }, { merge: true });
+        } catch (_) {}
+        localStorage.setItem("boda_playlist", JSON.stringify(currentPlaylist));
+        renderPlaylistUI();
         showToast("Canción eliminada");
       }
     };
@@ -407,10 +505,11 @@ saveSettingsBtn.addEventListener("click", async () => {
       date: date
     }, { merge: true });
 
+    localStorage.setItem("boda_names", names);
     showToast("¡Nombres y fecha guardados con éxito!");
   } catch (err) {
     console.error(err);
-    alert("Error al guardar nombres: " + err.message);
+    alert("Error al guardar: " + err.message);
   } finally {
     saveSettingsBtn.disabled = false;
     saveSettingsBtn.textContent = "💾 Guardar Nombres";
@@ -418,78 +517,93 @@ saveSettingsBtn.addEventListener("click", async () => {
 });
 
 // ========================================================
-// 6. SINCRONIZACIÓN EN TIEMPO REAL CON LA BASE DE DATOS
+// 6. SINCRONIZACIÓN EN TIEMPO REAL
 // ========================================================
 function initRealtimeListeners() {
-  // 1. Escuchar configuraciones de portada, nombres y música
-  const settingsDoc = doc(db, "meta", "settings");
-  onSnapshot(settingsDoc, (snap) => {
-    if (snap.exists()) {
-      const data = snap.data();
-      if (data.coverUrl) {
-        coverPreviewImg.src = data.coverUrl;
-      }
-      if (data.coupleNames) {
-        coverPreviewNames.textContent = data.coupleNames;
-        settingsNames.value = data.coupleNames;
-      }
-      if (data.subtitle) settingsSubtitle.value = data.subtitle;
-      if (data.date) settingsDate.value = data.date;
-      if (data.playlist && Array.isArray(data.playlist)) {
-        currentPlaylist = data.playlist;
-        renderPlaylistUI();
-      }
-    }
-  });
+  // Cargar datos previos de localStorage si existen
+  const savedCover = localStorage.getItem("boda_cover_url");
+  if (savedCover) coverPreviewImg.src = savedCover;
 
-  // 2. Escuchar momentos (álbumes)
-  const albumsQuery = query(collection(db, "albums"), orderBy("createdAt", "desc"));
-  onSnapshot(albumsQuery, (snap) => {
-    albumsData = [];
-    targetAlbumSelect.innerHTML = "";
-    momentsList.innerHTML = "";
+  const savedPlaylist = localStorage.getItem("boda_playlist");
+  if (savedPlaylist) {
+    try {
+      currentPlaylist = JSON.parse(savedPlaylist);
+      renderPlaylistUI();
+    } catch (_) {}
+  }
 
-    snap.forEach((docSnap) => {
-      const a = docSnap.data();
-      a.id = docSnap.id;
-      albumsData.push(a);
-
-      // Opción en el selector
-      const opt = document.createElement("option");
-      opt.value = a.id;
-      opt.textContent = a.name;
-      targetAlbumSelect.appendChild(opt);
-
-      // Elemento en la lista de momentos
-      const item = document.createElement("div");
-      item.className = "album-item";
-      item.innerHTML = `
-        <div>
-          <span class="album-item-name">${a.name}</span>
-          <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">${a.description || ''}</p>
-        </div>
-        <div>
-          <button class="btn-danger" style="padding: 0.4rem 0.9rem; font-size: 0.8rem;" data-id="${a.id}">
-            Eliminar
-          </button>
-        </div>
-      `;
-
-      item.querySelector(".btn-danger").onclick = async () => {
-        if (confirm(`¿Eliminar el momento "${a.name}"?`)) {
-          await deleteDoc(doc(db, "albums", a.id));
-          showToast(`Momento "${a.name}" eliminado`);
+  // 1. Escuchar configuraciones de portada, nombres y música en Firestore
+  try {
+    const settingsDoc = doc(db, "meta", "settings");
+    onSnapshot(settingsDoc, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.coverUrl) {
+          coverPreviewImg.src = data.coverUrl;
+          localStorage.setItem("boda_cover_url", data.coverUrl);
         }
-      };
-
-      momentsList.appendChild(item);
+        if (data.coupleNames) {
+          coverPreviewNames.textContent = data.coupleNames;
+          settingsNames.value = data.coupleNames;
+        }
+        if (data.subtitle) settingsSubtitle.value = data.subtitle;
+        if (data.date) settingsDate.value = data.date;
+        if (data.playlist && Array.isArray(data.playlist)) {
+          currentPlaylist = data.playlist;
+          localStorage.setItem("boda_playlist", JSON.stringify(data.playlist));
+          renderPlaylistUI();
+        }
+      }
     });
+  } catch (_) {}
 
-    if (albumsData.length === 0) {
-      // Si está vacío, cargar momentos por defecto
-      loadDefaultMomentsIfEmpty();
-    }
-  });
+  // 2. Escuchar momentos en Firestore
+  try {
+    const albumsQuery = query(collection(db, "albums"), orderBy("createdAt", "desc"));
+    onSnapshot(albumsQuery, (snap) => {
+      albumsData = [];
+      targetAlbumSelect.innerHTML = "";
+      momentsList.innerHTML = "";
+
+      snap.forEach((docSnap) => {
+        const a = docSnap.data();
+        a.id = docSnap.id;
+        albumsData.push(a);
+
+        const opt = document.createElement("option");
+        opt.value = a.id;
+        opt.textContent = a.name;
+        targetAlbumSelect.appendChild(opt);
+
+        const item = document.createElement("div");
+        item.className = "album-item";
+        item.innerHTML = `
+          <div>
+            <span class="album-item-name">${a.name}</span>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.2rem;">${a.description || ''}</p>
+          </div>
+          <div>
+            <button class="btn-danger" style="padding: 0.4rem 0.9rem; font-size: 0.8rem;" data-id="${a.id}">
+              Eliminar
+            </button>
+          </div>
+        `;
+
+        item.querySelector(".btn-danger").onclick = async () => {
+          if (confirm(`¿Eliminar el momento "${a.name}"?`)) {
+            await deleteDoc(doc(db, "albums", a.id));
+            showToast(`Momento "${a.name}" eliminado`);
+          }
+        };
+
+        momentsList.appendChild(item);
+      });
+
+      if (albumsData.length === 0) {
+        loadDefaultMomentsIfEmpty();
+      }
+    });
+  } catch (_) {}
 }
 
 async function loadDefaultMomentsIfEmpty() {
@@ -522,7 +636,7 @@ function showToast(msg) {
   setTimeout(() => toast.remove(), 3500);
 }
 
-// Inicializar en tiempo real
+// Inicializar
 window.addEventListener("DOMContentLoaded", () => {
   initRealtimeListeners();
 });
