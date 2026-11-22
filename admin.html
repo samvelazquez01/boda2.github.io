@@ -31,7 +31,7 @@
     <section class="admin-card" style="border: 2px solid var(--gold-primary);">
       <h2 class="admin-card-title">📸 Foto de Portada (Pantalla de Bienvenida)</h2>
       <p class="admin-card-subtitle">
-        Esta es la foto que sale al abrir el álbum. Selecciona tu foto y se guardará directamente.
+        Esta es la foto que sale al abrir el álbum. Selecciona tu foto y se guardará directamente en máxima calidad.
       </p>
 
       <div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: center;">
@@ -67,7 +67,46 @@
       </div>
     </section>
 
-    <!-- 2. SUBIR FOTOS DE LOS MOMENTOS -->
+    <!-- 2. FOTO DE CABECERA (BANNER PANORÁMICO DESENFOCADO) -->
+    <section class="admin-card">
+      <h2 class="admin-card-title">🌄 Foto de Cabecera (Banner Horizontal Desenfocado)</h2>
+      <p class="admin-card-subtitle">
+        Esta foto ocupará todo el ancho superior de "Nuestros Momentos Especiales" con un desenfoque elegante de fondo. Se ajusta automáticamente al tamaño de la pantalla.
+      </p>
+
+      <div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: center;">
+        <!-- Previsualización Horizontal -->
+        <div style="flex: 1; min-width: 280px; max-width: 520px;">
+          <div style="position: relative; aspect-ratio: 21/9; border-radius: var(--radius-md); overflow: hidden; border: 2px solid var(--border-subtle); background: #151518; box-shadow: var(--shadow-sm);">
+            <img id="banner-preview-img" src="placeholder.svg" alt="Foto de Cabecera" style="width: 100%; height: 100%; object-fit: cover; filter: blur(8px) brightness(0.5); transform: scale(1.05);" />
+            <div style="position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; padding: 1rem;">
+              <span style="font-family: var(--font-display); font-size: 1.15rem; color: #ffffff;">Nuestros Momentos Especiales</span>
+              <span style="font-size: 0.75rem; color: var(--gold-light); margin-top: 0.2rem;">Vista previa desenfocada de fondo</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controles para subir banner -->
+        <div style="flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 1rem;">
+          <input type="file" id="banner-file-input" accept="image/*" class="file-input" />
+          
+          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <button id="choose-banner-btn" class="btn-secondary" style="font-size: 0.95rem; padding: 0.85rem 1.6rem;">
+              <span>📁 Examinar Foto de Cabecera</span>
+            </button>
+            <button id="save-banner-btn" class="btn-primary" style="font-size: 0.95rem; padding: 0.85rem 1.6rem;" disabled>
+              <span>💾 Guardar Foto de Cabecera</span>
+            </button>
+          </div>
+
+          <div id="banner-status" style="font-size: 0.95rem; background: var(--bg-cream); padding: 0.8rem 1.2rem; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+            Estado: <span id="banner-status-text" style="color: var(--text-muted);">Si no subes una foto aquí, se usará automáticamente tu foto de portada.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. SUBIR FOTOS DE LOS MOMENTOS -->
     <section class="admin-card">
       <h2 class="admin-card-title">📷 Subir Fotos a los Momentos</h2>
       <p class="admin-card-subtitle">
@@ -117,10 +156,49 @@
       <div id="compressed-grid" class="compressed-grid"></div>
     </section>
 
-    <!-- 3. GESTIÓN DE MOMENTOS (CREAR O BORRAR) -->
+    <!-- 3. GESTIONAR Y ELIMINAR FOTOS DEL ÁLBUM -->
     <section class="admin-card">
-      <h2 class="admin-card-title">🗂️ Crear Nuevos Momentos</h2>
-      <p class="admin-card-subtitle">Agrega más capítulos si deseas (ej: "El Baile", "La Cena", "Momentos Familiares")</p>
+      <h2 class="admin-card-title">🖼️ Gestionar y Eliminar Fotos del Álbum</h2>
+      <p class="admin-card-subtitle">
+        Aquí puedes ver todas las fotos guardadas, seleccionar las fotos que no quieras o que se subieron con poca calidad y eliminarlas con un solo clic.
+      </p>
+
+      <div class="manage-filter-bar">
+        <div style="display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;">
+          <label for="manage-moment-filter" style="font-weight: 600;">Filtrar por Momento:</label>
+          <select id="manage-moment-filter" style="min-width: 200px; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+            <option value="all">Todas las Fotos</option>
+          </select>
+          <span id="manage-count-badge" style="background: var(--bg-cream-dark); padding: 0.35rem 0.8rem; border-radius: var(--radius-full); font-weight: 600; font-size: 0.85rem; color: var(--gold-dark);">
+            0 Fotos
+          </span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;">
+          <button id="select-all-photos-btn" class="btn-secondary" style="font-size: 0.85rem; padding: 0.6rem 1.2rem;">
+            <span>Seleccionar Todas</span>
+          </button>
+          <button id="deselect-all-photos-btn" class="btn-secondary hidden" style="font-size: 0.85rem; padding: 0.6rem 1.2rem;">
+            <span>Deseleccionar</span>
+          </button>
+          <button id="delete-selected-photos-btn" class="btn-danger" style="font-size: 0.85rem; padding: 0.6rem 1.4rem;" disabled>
+            <span>🗑️ Eliminar Seleccionadas (0)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Cuadrícula con las fotos guardadas -->
+      <div id="manage-photos-grid" class="manage-photos-grid">
+        <div class="loading">Cargando fotos del álbum...</div>
+      </div>
+    </section>
+
+    <!-- 4. GESTIÓN Y ORDEN DE LOS MOMENTOS -->
+    <section class="admin-card">
+      <h2 class="admin-card-title">🗂️ Gestión y Orden de los Momentos</h2>
+      <p class="admin-card-subtitle">
+        Crea nuevos momentos o usa los botones ⬆ y ⬇ para decidir el orden exacto en que aparecerán en la web pública.
+      </p>
 
       <div class="compression-controls-grid">
         <div class="control-group">
@@ -143,7 +221,7 @@
       </div>
     </section>
 
-    <!-- 4. NOMBRES Y FECHA DE LOS NOVIOS -->
+    <!-- 5. NOMBRES Y FECHA DE LOS NOVIOS -->
     <section class="admin-card">
       <h2 class="admin-card-title">✏️ Nombres y Fecha de la Boda</h2>
       <p class="admin-card-subtitle">Modifica los nombres que aparecen en la portada y en todo el álbum</p>

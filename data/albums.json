@@ -4,11 +4,13 @@
     "subtitle": "Nuestra Boda • Un Amor Para Siempre",
     "date": "2024-11-20",
     "welcomeMessage": "Gracias por acompañarnos y ser parte del día más feliz de nuestras vidas.",
-    "coverUrl": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1920&q=80"
+    "coverUrl": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1920&q=80",
+    "headerBannerUrl": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1920&q=80"
   },
   "albums": [
     {
       "id": "sesion-previa",
+      "order": 3,
       "name": "Sesión Previa",
       "description": "Momentos íntimos antes del gran día",
       "coverUrl": "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=800&q=80",
@@ -38,6 +40,7 @@
     },
     {
       "id": "la-ceremonia",
+      "order": 1,
       "name": "La Ceremonia",
       "description": "El 'Sí, acepto' ante Dios y nuestros seres queridos",
       "coverUrl": "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&w=800&q=80",
@@ -67,6 +70,7 @@
     },
     {
       "id": "la-recepcion",
+      "order": 2,
       "name": "La Recepción & Fiesta",
       "description": "Celebrando la alegría de comenzar este nuevo viaje",
       "coverUrl": "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=800&q=80",

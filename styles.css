@@ -330,17 +330,49 @@ body.on-landing {
   transition: opacity 0.5s ease;
 }
 
+.main-content {
+  position: relative;
+  overflow-x: hidden;
+  background-color: var(--bg-cream);
+  min-height: 100vh;
+}
+
 .main-content.hidden {
   display: none;
 }
 
 .header {
-  background: linear-gradient(to bottom, #1f1f23, #151518);
-  color: var(--text-light);
-  padding: 4.5rem 2rem 3.5rem;
-  text-align: center;
   position: relative;
+  min-height: 280px;
+  background: #151518;
+  color: var(--text-light);
+  padding: 4.8rem 2rem 4rem;
+  text-align: center;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-bg-img {
+  position: absolute;
+  inset: -25px;
+  width: calc(100% + 50px);
+  height: calc(100% + 50px);
+  object-fit: cover;
+  object-position: center center;
+  filter: blur(14px) brightness(0.48) saturate(1.2);
+  transform: scale(1.08);
+  z-index: 0;
+  transition: opacity 0.8s ease;
+  pointer-events: none;
+}
+
+.header-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(15, 15, 20, 0.4) 0%, rgba(10, 10, 14, 0.85) 100%);
+  z-index: 1;
 }
 
 .header::after {
@@ -351,9 +383,12 @@ body.on-landing {
   right: 0;
   height: 3px;
   background: var(--gold-gradient);
+  z-index: 3;
 }
 
 .header-content {
+  position: relative;
+  z-index: 2;
   max-width: 900px;
   margin: 0 auto;
 }
@@ -467,12 +502,58 @@ body.on-landing {
 }
 
 /* =======================================================
-   MAIN SECTION & MOMENTS GRID
+   MAIN SECTION & DECORATIVE SILHOUETTES
 ======================================================= */
+.bg-silhouettes-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.bg-botanical-silhouette {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.18;
+  filter: drop-shadow(0 4px 15px rgba(212, 175, 55, 0.3));
+  transition: opacity 0.5s ease;
+}
+
+.bg-botanical-left {
+  top: 80px;
+  left: -20px;
+  width: min(340px, 28vw);
+  height: auto;
+}
+
+.bg-botanical-right {
+  top: 280px;
+  right: -20px;
+  width: min(340px, 28vw);
+  height: auto;
+  transform: scaleX(-1);
+}
+
+.bg-wedding-watermark {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(650px, 85vw);
+  height: auto;
+  opacity: 0.055;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .main {
-  max-width: 1400px;
+  position: relative;
+  max-width: 1350px;
   margin: 0 auto;
-  padding: 3rem 2rem 5rem;
+  padding: 3.5rem 2rem 6rem;
+  z-index: 1;
 }
 
 .section-header {
@@ -508,11 +589,22 @@ body.on-landing {
   margin: 0.8rem auto 0;
 }
 
-/* Albums Cards */
+.section-desc {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-style: italic;
+  color: var(--text-muted);
+  margin-top: 0.8rem;
+}
+
+/* Albums Cards (Centering cards symmetrically on screen) */
 .albums-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 2.2rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 380px));
+  justify-content: center;
+  gap: 2.5rem;
+  position: relative;
+  z-index: 2;
 }
 
 .album-card {
@@ -1277,11 +1369,7 @@ body.on-landing {
   object-fit: cover;
 }
 
-.compressed-card-.hidden {
-  display: none !important;
-}
-
-body {
+.compressed-card-body {
   padding: 0.8rem;
   font-size: 0.8rem;
 }
@@ -1432,6 +1520,261 @@ body {
 @keyframes slideToast {
   from { transform: translateY(100px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+/* =======================================================
+   DEDICATED MOMENT CHAPTER VIEW & LUXURY TRANSITIONS
+======================================================= */
+.moment-detail-view {
+  animation: chapterEnter 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes chapterEnter {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.moment-detail-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 2.5rem;
+  position: relative;
+}
+
+.back-to-moments-btn {
+  align-self: flex-start;
+  margin-bottom: 1.5rem;
+  padding: 0.65rem 1.4rem;
+  background: #ffffff;
+  color: var(--text-dark);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.back-to-moments-btn:hover {
+  background: var(--gold-gradient);
+  color: #1a1a1a;
+  border-color: transparent;
+  transform: translateX(-4px);
+  box-shadow: var(--shadow-gold);
+}
+
+.moment-detail-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 750px;
+}
+
+.moment-detail-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-dark);
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid var(--border-subtle);
+  padding: 0.3rem 1rem;
+  border-radius: var(--radius-full);
+  margin-bottom: 0.8rem;
+  font-weight: 600;
+}
+
+.moment-detail-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 5vw, 3.2rem);
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--text-dark);
+  margin-bottom: 0.6rem;
+}
+
+.moment-detail-desc {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-style: italic;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.moment-detail-count {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gold-dark);
+  letter-spacing: 0.05em;
+}
+
+/* Moment cards order and layout refinements */
+.album-card {
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.45s ease;
+}
+
+.album-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18), 0 0 25px rgba(212, 175, 55, 0.25);
+}
+
+/* =======================================================
+   ADMIN PHOTO MANAGER & MOMENT REORDERING
+======================================================= */
+.manage-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: var(--bg-cream);
+  padding: 1.2rem 1.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 1.5rem;
+}
+
+.manage-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.2rem;
+  max-height: 600px;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.manage-photo-card {
+  position: relative;
+  background: #ffffff;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.manage-photo-card.selected {
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+}
+
+.manage-photo-card img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  display: block;
+}
+
+.manage-photo-card-info {
+  padding: 0.6rem 0.8rem;
+  font-size: 0.78rem;
+}
+
+.manage-photo-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-dark);
+}
+
+.manage-photo-moment {
+  font-size: 0.72rem;
+  color: var(--gold-dark);
+  font-weight: 500;
+  margin-top: 0.2rem;
+}
+
+.manage-photo-checkbox {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  width: 22px;
+  height: 22px;
+  accent-color: var(--gold-dark);
+  cursor: pointer;
+  z-index: 5;
+}
+
+.manage-photo-single-del {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: rgba(220, 53, 69, 0.9);
+  color: #ffffff;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  transition: var(--transition);
+  z-index: 5;
+}
+
+.manage-photo-single-del:hover {
+  background: #bd2130;
+  transform: scale(1.15);
+}
+
+/* Order buttons for moments */
+.order-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.btn-order {
+  background: var(--bg-cream);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-dark);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: var(--transition);
+}
+
+.btn-order:hover:not(:disabled) {
+  background: var(--gold-gradient);
+  color: #1a1a1a;
+  border-color: transparent;
+  transform: scale(1.1);
+}
+
+.btn-order:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.moment-order-badge {
+  background: var(--gold-gradient);
+  color: #1a1a1a;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-full);
+  margin-right: 0.5rem;
 }
 
 /* Responsive queries */

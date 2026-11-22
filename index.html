@@ -76,6 +76,10 @@
     
     <!-- Header banner con botón para regresar a la portada -->
     <div class="header">
+      <!-- Foto de cabecera panorámica con desenfoque cinematográfico -->
+      <img id="header-bg-img" class="header-bg-img" src="" alt="Cabecera del Álbum" style="display: none;" />
+      <div class="header-overlay"></div>
+
       <div class="header-content">
         <button id="return-landing-btn" class="return-cover-btn" title="Volver a la portada de bienvenida">
           <span>← Volver a Portada</span>
@@ -88,26 +92,77 @@
       </div>
     </div>
 
-    <!-- Filter & Navigation bar (Sticky) -->
-    <nav class="filter-nav-wrapper">
-      <div class="filter-nav">
-        <div id="filter-pills" class="filter-pills">
-          <button class="filter-pill active" data-filter="all">Todas las Fotos</button>
-        </div>
-        <a href="admin.html" class="nav-admin-link" title="Gestionar y subir fotos">
-          ⚙️ <span>Gestionar Fotos</span>
-        </a>
+    <!-- Siluetas botánicas y filigranas decorativas de fondo -->
+    <div class="bg-silhouettes-container" aria-hidden="true">
+      <!-- Rama botánica izquierda -->
+      <svg class="bg-botanical-silhouette bg-botanical-left" viewBox="0 0 280 620" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 610C35 480 85 360 160 210C195 140 240 60 265 12" stroke="url(#goldSilGrad)" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M158 215C130 190 90 195 65 210C95 230 135 228 158 215Z" fill="url(#goldSilGrad)" opacity="0.6"/>
+        <path d="M165 205C190 175 235 170 258 185C235 210 192 215 165 205Z" fill="url(#goldSilGrad)" opacity="0.65"/>
+        <path d="M130 270C95 250 55 260 30 280C65 295 105 290 130 270Z" fill="url(#goldSilGrad)" opacity="0.55"/>
+        <path d="M140 260C165 230 208 230 230 248C205 270 165 272 140 260Z" fill="url(#goldSilGrad)" opacity="0.6"/>
+        <path d="M102 335C70 318 35 330 15 352C48 362 85 355 102 335Z" fill="url(#goldSilGrad)" opacity="0.5"/>
+        <path d="M112 325C138 298 178 300 198 320C172 340 135 340 112 325Z" fill="url(#goldSilGrad)" opacity="0.55"/>
+        <path d="M72 410C42 398 15 412 2 435C32 442 62 432 72 410Z" fill="url(#goldSilGrad)" opacity="0.45"/>
+        <path d="M80 400C105 375 142 380 160 400C135 418 102 418 80 400Z" fill="url(#goldSilGrad)" opacity="0.5"/>
+        <path d="M210 120C185 95 150 102 130 120C158 135 192 132 210 120Z" fill="url(#goldSilGrad)" opacity="0.7"/>
+        <path d="M218 110C240 82 278 80 295 98C272 120 238 122 218 110Z" fill="url(#goldSilGrad)" opacity="0.75"/>
+        <path d="M265 14C248 1 225 10 215 25C235 38 258 32 265 14Z" fill="url(#goldSilGrad)" opacity="0.85"/>
+        <defs>
+          <linearGradient id="goldSilGrad" x1="0" y1="0" x2="280" y2="620" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#aa841e"/>
+            <stop offset="50%" stop-color="#d4af37"/>
+            <stop offset="100%" stop-color="#f7e7b4"/>
+          </linearGradient>
+        </defs>
+      </svg>
+
+      <!-- Rama botánica derecha invertida -->
+      <svg class="bg-botanical-silhouette bg-botanical-right" viewBox="0 0 280 620" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 610C35 480 85 360 160 210C195 140 240 60 265 12" stroke="url(#goldSilGrad2)" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M158 215C130 190 90 195 65 210C95 230 135 228 158 215Z" fill="url(#goldSilGrad2)" opacity="0.6"/>
+        <path d="M165 205C190 175 235 170 258 185C235 210 192 215 165 205Z" fill="url(#goldSilGrad2)" opacity="0.65"/>
+        <path d="M130 270C95 250 55 260 30 280C65 295 105 290 130 270Z" fill="url(#goldSilGrad2)" opacity="0.55"/>
+        <path d="M140 260C165 230 208 230 230 248C205 270 165 272 140 260Z" fill="url(#goldSilGrad2)" opacity="0.6"/>
+        <path d="M102 335C70 318 35 330 15 352C48 362 85 355 102 335Z" fill="url(#goldSilGrad2)" opacity="0.5"/>
+        <path d="M112 325C138 298 178 300 198 320C172 340 135 340 112 325Z" fill="url(#goldSilGrad2)" opacity="0.55"/>
+        <path d="M210 120C185 95 150 102 130 120C158 135 192 132 210 120Z" fill="url(#goldSilGrad2)" opacity="0.7"/>
+        <path d="M218 110C240 82 278 80 295 98C272 120 238 122 218 110Z" fill="url(#goldSilGrad2)" opacity="0.75"/>
+        <path d="M265 14C248 1 225 10 215 25C235 38 258 32 265 14Z" fill="url(#goldSilGrad2)" opacity="0.85"/>
+        <defs>
+          <linearGradient id="goldSilGrad2" x1="0" y1="0" x2="280" y2="620" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#aa841e"/>
+            <stop offset="50%" stop-color="#d4af37"/>
+            <stop offset="100%" stop-color="#f7e7b4"/>
+          </linearGradient>
+        </defs>
+      </svg>
+
+      <!-- Gran filigrana de anillos de boda de fondo (Marca de agua sutil) -->
+      <div class="bg-wedding-watermark">
+        <svg viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="205" cy="250" r="135" stroke="url(#goldWatermarkGrad)" stroke-width="3.5" stroke-dasharray="10 8"/>
+          <circle cx="295" cy="250" r="135" stroke="url(#goldWatermarkGrad)" stroke-width="3.5"/>
+          <path d="M295 95 L310 118 L295 140 L280 118 Z" fill="url(#goldWatermarkGrad)"/>
+          <defs>
+            <linearGradient id="goldWatermarkGrad" x1="50" y1="50" x2="450" y2="450" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#d4af37"/>
+              <stop offset="100%" stop-color="#aa841e"/>
+            </linearGradient>
+          </defs>
+        </svg>
       </div>
-    </nav>
+    </div>
 
     <!-- Main Section -->
     <main class="main">
 
-      <!-- Sección 1: Momentos Cards Grid -->
+      <!-- VISTA 1: Catálogo de Momentos (Capítulos de la Boda) -->
       <section id="albums-section" class="section">
         <div class="section-header">
-          <p class="section-subtitle">Capítulos de Nuestro Día</p>
+          <p class="section-subtitle">Capítulos de Nuestro Gran Día</p>
           <h3 class="section-title">Colección de Momentos</h3>
+          <p class="section-desc">Selecciona un momento para abrir su álbum de fotos exclusivo.</p>
         </div>
 
         <div id="albums-grid" class="albums-grid">
@@ -115,18 +170,24 @@
         </div>
       </section>
 
-      <!-- Sección 2: Galería de Fotos en Alta Calidad -->
-      <section id="gallery-section" class="section">
-        <div class="gallery-section-header">
-          <p id="gallery-subtitle" class="section-subtitle">Recuerdos en Alta Calidad</p>
-          <h2 id="gallery-title" class="section-title">Todas las Fotografías</h2>
-          <p id="gallery-desc" class="gallery-album-desc">
-            Haz clic en cualquier fotografía para verla en pantalla completa o usa el botón ⬇ para descargarla en su calidad original.
-          </p>
+      <!-- VISTA 2: Álbum Dedicado del Momento (Se abre con transición elegante) -->
+      <section id="moment-detail-view" class="section moment-detail-view hidden">
+        <div class="moment-detail-header">
+          <button id="back-to-moments-btn" class="back-to-moments-btn" title="Volver a los capítulos">
+            <span>← Volver a Todos los Momentos</span>
+          </button>
+          
+          <div class="moment-detail-meta">
+            <span id="moment-detail-badge" class="moment-detail-badge">Capítulo Especial</span>
+            <h2 id="moment-detail-title" class="moment-detail-title">Cargando Momento...</h2>
+            <p id="moment-detail-desc" class="moment-detail-desc"></p>
+            <div id="moment-detail-count" class="moment-detail-count">0 Fotografías</div>
+          </div>
         </div>
 
+        <!-- Galería de fotos del momento actual -->
         <div id="gallery-grid" class="gallery-grid">
-          <div class="loading">Cargando fotos...</div>
+          <div class="loading">Cargando fotografías...</div>
         </div>
       </section>
 
@@ -170,7 +231,6 @@
       <p class="footer-meta">Nuestra Boda • Para Siempre</p>
       <div class="footer-links">
         <button id="footer-return-btn" class="footer-link-btn">Volver a la Portada ↑</button>
-        <a href="admin.html">Panel de Administración</a>
       </div>
     </footer>
 

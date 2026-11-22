@@ -37,7 +37,7 @@ let albumSettings = {
 
 let albumsMap = new Map();
 let allPhotosList = [];
-let currentFilter = "all";
+let activeMomentId = null;
 let currentDisplayedPhotos = [];
 let currentPhotoIndex = 0;
 let likedPhotos = new Set();
@@ -60,14 +60,15 @@ const heroSubtitle = document.getElementById("hero-subtitle");
 const heroDate = document.getElementById("hero-date");
 const headerDesc = document.getElementById("header-desc");
 
-const filterPillsContainer = document.getElementById("filter-pills");
+const albumsSection = document.getElementById("albums-section");
 const albumsGrid = document.getElementById("albums-grid");
 
-const gallerySection = document.getElementById("gallery-section");
+const momentDetailView = document.getElementById("moment-detail-view");
+const backToMomentsBtn = document.getElementById("back-to-moments-btn");
+const momentDetailTitle = document.getElementById("moment-detail-title");
+const momentDetailDesc = document.getElementById("moment-detail-desc");
+const momentDetailCount = document.getElementById("moment-detail-count");
 const galleryGrid = document.getElementById("gallery-grid");
-const galleryTitle = document.getElementById("gallery-title");
-const gallerySubtitle = document.getElementById("gallery-subtitle");
-const galleryDesc = document.getElementById("gallery-desc");
 
 // Lightbox DOM
 const lightbox = document.getElementById("lightbox");
@@ -153,6 +154,9 @@ function initRealtimeData() {
   const localCover = localStorage.getItem("boda_cover_url");
   if (localCover) setLandingCover(localCover);
 
+  const localBanner = localStorage.getItem("boda_banner_url") || localCover;
+  if (localBanner) setHeaderBanner(localBanner);
+
   const localNames = localStorage.getItem("boda_names");
   if (localNames) {
     heroTitle.textContent = localNames;
@@ -168,6 +172,13 @@ function initRealtimeData() {
         albumSettings.coverUrl = data.coverUrl;
         try { localStorage.setItem("boda_cover_url", data.coverUrl); } catch (_) {}
         setLandingCover(data.coverUrl);
+        if (!data.headerBannerUrl && !localStorage.getItem("boda_banner_url")) {
+          setHeaderBanner(data.coverUrl);
+        }
+      }
+      if (data.headerBannerUrl) {
+        setHeaderBanner(data.headerBannerUrl);
+        try { localStorage.setItem("boda_banner_url", data.headerBannerUrl); } catch (_) {}
       }
       if (data.coupleNames) {
         albumSettings.coupleNames = data.coupleNames;
@@ -201,9 +212,7 @@ function initRealtimeData() {
         albumsMap.set(a.id, a);
       });
 
-      renderFilterPills();
       renderMomentsCards();
-      updateGallery();
     }
   });
 
@@ -227,7 +236,6 @@ function initRealtimeData() {
       });
 
       renderMomentsCards();
-      updateGallery();
     }
   });
 
@@ -248,6 +256,13 @@ async function loadLocalJsonFallback() {
         if (!localStorage.getItem("boda_names") && data.settings.coupleNames) {
           heroTitle.textContent = data.settings.coupleNames;
         }
+        if (!localStorage.getItem("boda_banner_url")) {
+          if (data.settings.headerBannerUrl) {
+            setHeaderBanner(data.settings.headerBannerUrl);
+          } else if (data.settings.coverUrl) {
+            setHeaderBanner(data.settings.coverUrl);
+          }
+        }
       }
 
       // Si Firestore aún no tiene momentos ni fotos, cargar de albums.json
@@ -261,12 +276,19 @@ async function loadLocalJsonFallback() {
             });
           }
         });
-        renderFilterPills();
         renderMomentsCards();
-        updateGallery();
       }
     }
   } catch (_) {}
+}
+
+function setHeaderBanner(url) {
+  if (!url || url === "placeholder.svg") return;
+  const headerBgImg = document.getElementById("header-bg-img");
+  if (headerBgImg) {
+    headerBgImg.src = url;
+    headerBgImg.style.display = "block";
+  }
 }
 
 function setLandingCover(url) {
@@ -294,39 +316,8 @@ function setLandingCover(url) {
 }
 
 // ========================================================
-// 4. FILTROS Y TARJETAS DE MOMENTOS
+// 4. COLECCIÓN DE MOMENTOS Y ÁLBUM DEDICADO
 // ========================================================
-function renderFilterPills() {
-  filterPillsContainer.innerHTML = "";
-
-  const allBtn = document.createElement("button");
-  allBtn.className = currentFilter === "all" ? "filter-pill active" : "filter-pill";
-  allBtn.textContent = "Todas las Fotos";
-  allBtn.onclick = () => {
-    setActivePill(allBtn);
-    currentFilter = "all";
-    updateGallery();
-  };
-  filterPillsContainer.appendChild(allBtn);
-
-  albumsMap.forEach((album) => {
-    const pill = document.createElement("button");
-    pill.className = currentFilter === album.id ? "filter-pill active" : "filter-pill";
-    pill.textContent = album.name;
-    pill.onclick = () => {
-      setActivePill(pill);
-      currentFilter = album.id;
-      updateGallery();
-    };
-    filterPillsContainer.appendChild(pill);
-  });
-}
-
-function setActivePill(btn) {
-  document.querySelectorAll(".filter-pill").forEach(p => p.classList.remove("active"));
-  btn.classList.add("active");
-}
-
 function renderMomentsCards() {
   albumsGrid.innerHTML = "";
 
@@ -335,9 +326,17 @@ function renderMomentsCards() {
     return;
   }
 
-  albumsMap.forEach((album) => {
+  // Ordenar los momentos según la prioridad configurada en el Admin (campo order)
+  const sortedAlbums = Array.from(albumsMap.values()).sort((a, b) => {
+    const orderA = typeof a.order === "number" ? a.order : 999;
+    const orderB = typeof b.order === "number" ? b.order : 999;
+    if (orderA !== orderB) return orderA - orderB;
+    return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+  });
+
+  sortedAlbums.forEach((album) => {
     const count = (album.photos && album.photos.length) || 0;
-    const cover = (album.photos && album.photos[0] ? album.photos[0].url : album.coverUrl) || "placeholder.svg";
+    const cover = (album.photos && album.photos[0] ? (album.photos[0].originalUrl || album.photos[0].url) : album.coverUrl) || "placeholder.svg";
 
     const card = document.createElement("div");
     card.className = "album-card";
@@ -348,50 +347,71 @@ function renderMomentsCards() {
         <h3 class="album-card-title">${album.name}</h3>
         <p class="album-card-desc">${album.description || ''}</p>
         <div class="album-card-footer">
-          <span>Ver fotos de este momento</span>
-          <span class="album-card-btn">Ver Fotos ↓</span>
+          <span>Ver este capítulo</span>
+          <span class="album-card-btn">Abrir Momento ✨ →</span>
         </div>
       </div>
     `;
 
     card.onclick = () => {
-      currentFilter = album.id;
-      document.querySelectorAll(".filter-pill").forEach(p => {
-        if (p.textContent === album.name) setActivePill(p);
-      });
-      updateGallery();
-      gallerySection.scrollIntoView({ behavior: "smooth", block: "start" });
+      openMoment(album.id);
     };
 
     albumsGrid.appendChild(card);
   });
+
+  // Si hay un momento abierto actualmente, actualizar sus fotos en tiempo real
+  if (activeMomentId && albumsMap.has(activeMomentId)) {
+    const activeAlb = albumsMap.get(activeMomentId);
+    momentDetailCount.textContent = `${activeAlb.photos ? activeAlb.photos.length : 0} Fotografías`;
+    renderMomentPhotos(activeAlb.photos || []);
+  }
+}
+
+// Abrir un Momento Dedicado (Experiencia Inmersiva)
+function openMoment(albumId) {
+  const album = albumsMap.get(albumId);
+  if (!album) return;
+
+  activeMomentId = albumId;
+  const count = (album.photos && album.photos.length) || 0;
+
+  momentDetailTitle.textContent = album.name;
+  momentDetailDesc.textContent = album.description || "Colección especial de este momento.";
+  momentDetailCount.textContent = `${count} ${count === 1 ? 'Fotografía' : 'Fotografías'}`;
+
+  renderMomentPhotos(album.photos || []);
+
+  albumsSection.classList.add("hidden");
+  momentDetailView.classList.remove("hidden");
+  momentDetailView.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// Volver al Catálogo de Momentos
+function closeMoment() {
+  activeMomentId = null;
+  momentDetailView.classList.add("hidden");
+  albumsSection.classList.remove("hidden");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+if (backToMomentsBtn) {
+  backToMomentsBtn.addEventListener("click", closeMoment);
 }
 
 // ========================================================
-// 5. GALERÍA DE FOTOS (ALTA CALIDAD & DESCARGA)
+// 5. GALERÍA DE FOTOS DENTRO DEL MOMENTO (ALTA CALIDAD & DESCARGA)
 // ========================================================
-function updateGallery() {
+function renderMomentPhotos(photos) {
   galleryGrid.innerHTML = "";
-
-  if (currentFilter === "all") {
-    currentDisplayedPhotos = allPhotosList;
-    gallerySubtitle.textContent = "Recuerdos en Alta Calidad";
-    galleryTitle.textContent = "Todas las Fotografías";
-    galleryDesc.textContent = `Colección completa de ${allPhotosList.length} momentos inolvidables de nuestra boda. Toca cualquier foto para ampliarla o usa ⬇ para descargarla.`;
-  } else {
-    const targetAlbum = albumsMap.get(currentFilter);
-    if (targetAlbum) {
-      currentDisplayedPhotos = targetAlbum.photos || [];
-      gallerySubtitle.textContent = "Momento de Boda";
-      galleryTitle.textContent = targetAlbum.name;
-      galleryDesc.textContent = targetAlbum.description || `Colección de ${currentDisplayedPhotos.length} fotos de este momento.`;
-    } else {
-      currentDisplayedPhotos = [];
-    }
-  }
+  currentDisplayedPhotos = photos || [];
 
   if (currentDisplayedPhotos.length === 0) {
-    galleryGrid.innerHTML = `<div class="loading">No hay fotografías disponibles en este momento.</div>`;
+    galleryGrid.innerHTML = `
+      <div class="loading" style="grid-column: 1 / -1; padding: 4rem 1rem;">
+        ✨ Aún no se han añadido fotografías a este momento.
+      </div>
+    `;
     return;
   }
 
@@ -399,8 +419,9 @@ function updateGallery() {
     const isLiked = likedPhotos.has(photo.id || photo.url);
     const item = document.createElement("div");
     item.className = "gallery-item";
+    const imgUrl = photo.originalUrl || photo.url;
     item.innerHTML = `
-      <img class="gallery-item-img" src="${photo.url}" alt="${photo.filename || 'Foto de boda'}" loading="lazy" onerror="this.src='placeholder.svg'" />
+      <img class="gallery-item-img" src="${imgUrl}" alt="${photo.filename || 'Foto de boda'}" loading="lazy" onerror="this.src='placeholder.svg'" />
       <div class="gallery-item-overlay">
         <div class="gallery-item-title">${photo.filename || 'Momento especial'}</div>
       </div>
@@ -412,14 +433,14 @@ function updateGallery() {
       </div>
     `;
 
-    // Abrir en pantalla completa al tocar la foto
+    // Abrir visor de pantalla completa (navega por las fotos de este momento)
     item.querySelector(".gallery-item-img").onclick = () => openLightbox(index);
     item.querySelector(".gallery-item-overlay").onclick = () => openLightbox(index);
 
-    // Botón de Descarga Directa
+    // Botón de Descarga Directa en calidad original
     item.querySelector(".gallery-item-download").onclick = (e) => {
       e.stopPropagation();
-      downloadPhoto(photo.originalUrl || photo.url, photo.filename || `foto-boda-${index + 1}`);
+      downloadPhoto(imgUrl, photo.filename || `foto-boda-${index + 1}`);
     };
 
     // Botón de Corazón
@@ -609,6 +630,7 @@ function showAlbum() {
 }
 
 function showLanding() {
+  closeMoment();
   mainContent.classList.add("hidden");
   landingSection.style.display = "flex";
   document.body.classList.add("on-landing");
