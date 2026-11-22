@@ -4,8 +4,7 @@
     "subtitle": "Nuestra Boda • Un Amor Para Siempre",
     "date": "2024-11-20",
     "welcomeMessage": "Gracias por acompañarnos y ser parte del día más feliz de nuestras vidas.",
-    "coverUrl": "photos/portada.jpg",
-    "musicUrl": "music/cancion.mp3"
+    "coverUrl": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1920&q=80"
   },
   "albums": [
     {
