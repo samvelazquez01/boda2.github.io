@@ -111,9 +111,16 @@ async function uploadToImgBB(file) {
     throw new Error(data.error?.message || "No se pudo obtener la URL de ImgBB");
   }
 
-  // URL directa permanente del archivo ORIGINAL en máxima resolución (sin compresión de ImgBB)
-  const fullQualityUrl = (data.data.image && data.data.image.url) || data.data.url || data.data.display_url;
-  return fullQualityUrl;
+  // URL del archivo original sin compresión para descargas en máxima calidad (48MP)
+  const originalUrl = (data.data.image && data.data.image.url) || data.data.url;
+
+  // URL optimizada en Web HD para visualización rápida en celulares sin saturar la memoria RAM
+  const displayUrl = (data.data.medium && data.data.medium.url) || data.data.display_url || originalUrl;
+
+  // Miniatura ligera para previsualizaciones rápidas
+  const thumbUrl = (data.data.thumb && data.data.thumb.url) || displayUrl;
+
+  return { originalUrl, displayUrl, thumbUrl };
 }
 
 // ========================================================
@@ -141,16 +148,17 @@ saveCoverBtn.addEventListener("click", async () => {
 
   try {
     // 1. Subir a ImgBB
-    const imgbbUrl = await uploadToImgBB(selectedCoverFile);
-    console.log("Portada subida a ImgBB:", imgbbUrl);
+    const imgData = await uploadToImgBB(selectedCoverFile);
+    const coverUrl = imgData.displayUrl || imgData.originalUrl;
+    console.log("Portada subida a ImgBB:", coverUrl);
 
     // 2. Guardar en Firestore
     const settingsDoc = doc(db, "meta", "settings");
-    await setDoc(settingsDoc, { coverUrl: imgbbUrl }, { merge: true });
+    await setDoc(settingsDoc, { coverUrl: coverUrl, coverOriginalUrl: imgData.originalUrl }, { merge: true });
 
     // 3. Respaldo en localStorage
-    localStorage.setItem("boda_cover_url", imgbbUrl);
-    coverPreviewImg.src = imgbbUrl;
+    localStorage.setItem("boda_cover_url", coverUrl);
+    coverPreviewImg.src = coverUrl;
 
     coverStatusText.innerHTML = `<span style="color: #28a745; font-weight: 600;">✅ ¡Foto de portada guardada en ImgBB con éxito! Ya se ve en tu web pública.</span>`;
     showToast("¡Foto de portada guardada con éxito en ImgBB! 🎉");
@@ -196,16 +204,17 @@ if (saveBannerBtn) {
 
     try {
       // 1. Subir a ImgBB
-      const imgbbUrl = await uploadToImgBB(selectedBannerFile);
-      console.log("Cabecera subida a ImgBB:", imgbbUrl);
+      const imgData = await uploadToImgBB(selectedBannerFile);
+      const bannerUrl = imgData.displayUrl || imgData.originalUrl;
+      console.log("Cabecera subida a ImgBB:", bannerUrl);
 
       // 2. Guardar en Firestore
       const settingsDoc = doc(db, "meta", "settings");
-      await setDoc(settingsDoc, { headerBannerUrl: imgbbUrl }, { merge: true });
+      await setDoc(settingsDoc, { headerBannerUrl: bannerUrl, headerBannerOriginalUrl: imgData.originalUrl }, { merge: true });
 
       // 3. Respaldo en localStorage
-      localStorage.setItem("boda_banner_url", imgbbUrl);
-      if (bannerPreviewImg) bannerPreviewImg.src = imgbbUrl;
+      localStorage.setItem("boda_banner_url", bannerUrl);
+      if (bannerPreviewImg) bannerPreviewImg.src = bannerUrl;
 
       if (bannerStatusText) {
         bannerStatusText.innerHTML = `<span style="color: #28a745; font-weight: 600;">✅ ¡Foto de cabecera guardada en ImgBB con éxito! Ya se ve con desenfoque de fondo en tu web.</span>`;
@@ -285,13 +294,14 @@ savePhotosBtn.addEventListener("click", async () => {
 
     try {
       // 1. Subir imagen a ImgBB
-      const photoUrl = await uploadToImgBB(file);
+      const imgData = await uploadToImgBB(file);
 
-      // 2. Guardar registro en Firestore
+      // 2. Guardar registro en Firestore (Web HD para navegación fluida + Original para descarga 48MP)
       await addDoc(collection(db, "photos"), {
         albumId: selectedAlbumId,
-        url: photoUrl,
-        originalUrl: photoUrl,
+        url: imgData.displayUrl || imgData.originalUrl,
+        originalUrl: imgData.originalUrl,
+        thumbUrl: imgData.thumbUrl || imgData.displayUrl || imgData.originalUrl,
         filename: file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " "),
         createdAt: serverTimestamp()
       });
@@ -446,12 +456,12 @@ function renderManagePhotos() {
 
     const albumObj = albumsData.find(a => a.id === photo.albumId);
     const albumName = albumObj ? albumObj.name : (photo.albumId || "General");
-    const imgUrl = photo.originalUrl || photo.url;
+    const imgUrl = photo.thumbUrl || photo.url || photo.originalUrl;
 
     card.innerHTML = `
       <input type="checkbox" class="manage-photo-checkbox" ${isSelected ? 'checked' : ''} />
       <button class="manage-photo-single-del" title="Eliminar esta foto permanentemente">🗑️</button>
-      <img src="${imgUrl}" alt="${photo.filename || ''}" loading="lazy" onerror="this.src='placeholder.svg'" />
+      <img src="${imgUrl}" alt="${photo.filename || ''}" loading="lazy" decoding="async" onerror="this.src='placeholder.svg'" />
       <div class="manage-photo-card-info">
         <div class="manage-photo-name" title="${photo.filename || ''}">${photo.filename || 'Foto de Boda'}</div>
         <div class="manage-photo-moment">${albumName}</div>

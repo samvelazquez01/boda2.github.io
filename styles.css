@@ -617,6 +617,8 @@ body.on-landing {
   box-shadow: var(--shadow-md);
   transition: var(--transition);
   border: 1px solid rgba(212, 175, 55, 0.15);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
 }
 
 .album-card:hover {
@@ -770,6 +772,8 @@ body.on-landing {
   box-shadow: var(--shadow-sm);
   border: 1px solid rgba(212, 175, 55, 0.15);
   transition: var(--transition);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
 }
 
 .gallery-item:hover {
@@ -782,7 +786,8 @@ body.on-landing {
   height: 100%;
   object-fit: cover;
   image-rendering: -webkit-optimize-contrast;
-  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease;
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .gallery-item:hover .gallery-item-img {

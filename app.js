@@ -336,12 +336,12 @@ function renderMomentsCards() {
 
   sortedAlbums.forEach((album) => {
     const count = (album.photos && album.photos.length) || 0;
-    const cover = (album.photos && album.photos[0] ? (album.photos[0].originalUrl || album.photos[0].url) : album.coverUrl) || "placeholder.svg";
+    const cover = (album.photos && album.photos[0] ? (album.photos[0].url || album.photos[0].originalUrl) : album.coverUrl) || "placeholder.svg";
 
     const card = document.createElement("div");
     card.className = "album-card";
     card.innerHTML = `
-      <img class="album-card-bg" src="${cover}" alt="${album.name}" loading="lazy" onerror="this.src='placeholder.svg'" />
+      <img class="album-card-bg" src="${cover}" alt="${album.name}" loading="lazy" decoding="async" onerror="this.src='placeholder.svg'" />
       <div class="album-card-overlay">
         <span class="album-card-badge">${count} ${count === 1 ? 'Fotografía' : 'Fotografías'}</span>
         <h3 class="album-card-title">${album.name}</h3>
@@ -419,9 +419,11 @@ function renderMomentPhotos(photos) {
     const isLiked = likedPhotos.has(photo.id || photo.url);
     const item = document.createElement("div");
     item.className = "gallery-item";
-    const imgUrl = photo.originalUrl || photo.url;
+    const displayUrl = photo.url || photo.originalUrl;
+    const downloadUrl = photo.originalUrl || photo.url;
+
     item.innerHTML = `
-      <img class="gallery-item-img" src="${imgUrl}" alt="${photo.filename || 'Foto de boda'}" loading="lazy" onerror="this.src='placeholder.svg'" />
+      <img class="gallery-item-img" src="${displayUrl}" alt="${photo.filename || 'Foto de boda'}" loading="lazy" decoding="async" onerror="this.src='placeholder.svg'" />
       <div class="gallery-item-overlay">
         <div class="gallery-item-title">${photo.filename || 'Momento especial'}</div>
       </div>
@@ -437,10 +439,10 @@ function renderMomentPhotos(photos) {
     item.querySelector(".gallery-item-img").onclick = () => openLightbox(index);
     item.querySelector(".gallery-item-overlay").onclick = () => openLightbox(index);
 
-    // Botón de Descarga Directa en calidad original
+    // Botón de Descarga Directa en máxima calidad original (48MP)
     item.querySelector(".gallery-item-download").onclick = (e) => {
       e.stopPropagation();
-      downloadPhoto(imgUrl, photo.filename || `foto-boda-${index + 1}`);
+      downloadPhoto(downloadUrl, photo.filename || `foto-boda-${index + 1}`);
     };
 
     // Botón de Corazón
@@ -521,7 +523,8 @@ function updateLightboxContent() {
   const photo = currentDisplayedPhotos[currentPhotoIndex];
   if (!photo) return;
 
-  lightboxImg.src = photo.originalUrl || photo.url;
+  lightboxImg.decoding = "async";
+  lightboxImg.src = photo.url || photo.originalUrl;
   lightboxTitle.textContent = photo.filename || "Momento de Boda";
   lightboxCounter.textContent = `${currentPhotoIndex + 1} de ${currentDisplayedPhotos.length}`;
 
@@ -539,7 +542,8 @@ function renderFilmstrip() {
   currentDisplayedPhotos.forEach((photo, i) => {
     const thumb = document.createElement("div");
     thumb.className = `lightbox-thumb ${i === currentPhotoIndex ? 'active' : ''}`;
-    thumb.innerHTML = `<img src="${photo.url}" alt="" loading="lazy" onerror="this.src='placeholder.svg'" />`;
+    const thumbUrl = photo.thumbUrl || photo.url || photo.originalUrl;
+    thumb.innerHTML = `<img src="${thumbUrl}" alt="" loading="lazy" decoding="async" onerror="this.src='placeholder.svg'" />`;
     thumb.onclick = () => {
       currentPhotoIndex = i;
       updateLightboxContent();
